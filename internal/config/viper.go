@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/viper"
 	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/spf13/viper"
 )
 
 // SetDefaults establishes all fallback defaults.
 func SetDefaults() {
 	// paths
-	viper.SetDefault("dirs.src", "src")
-	viper.SetDefault("dirs.functions_subdir", "cloud-functions")
-	viper.SetDefault("dirs.containers_subdir", "cloud-runs")
+	// viper.SetDefault("dirs.src", "src")
+	// viper.SetDefault("dirs.functions_subdir", "cloud-functions")
+	// viper.SetDefault("dirs.containers_subdir", "cloud-runs")
 
 	// Go defaults
-	viper.SetDefault("go.os", "linux")
-	viper.SetDefault("go.arch", "amd64")
+	// viper.SetDefault("go.os", "linux")
+	// viper.SetDefault("go.arch", "amd64")
 
 	// image defaults
 	viper.SetDefault("image.tag", "latest")
@@ -30,25 +30,23 @@ func SetDefaults() {
 }
 
 // LoadConfig reads ./flow.* or ~/.flow.* + ENV (with prefix FLOW_).
-
-func LoadConfig(cfgFile string) {
+func LoadConfig(flagConfigFilePath string) {
 	viper.SetEnvPrefix("FLOW")
 	viper.AutomaticEnv()
 
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	if flagConfigFilePath != "" {
+		viper.SetConfigFile(flagConfigFilePath)
 	} else {
-		// Add dynamic repo root
+		// Only check project root (not current dir or home)
 		if repoRoot, err := utils.DetectProjectRoot(); err == nil {
-			viper.AddConfigPath(repoRoot)
+			viper.AddConfigPath(repoRoot) // Tries to find .git folder.
+			viper.AddConfigPath(".")      // Falbacks to current dir.
+			viper.SetConfigName("flow")
+			viper.SetConfigType("yaml")
+		} else {
+			fmt.Fprintln(os.Stderr, " Could not detect project root, no config will be loaded.")
+			return
 		}
-
-		// fallback to current dir and home dir
-		viper.AddConfigPath(".")
-		viper.AddConfigPath(os.Getenv("HOME"))
-
-		viper.SetConfigName("flow") // for flow.yaml
-		viper.SetConfigType("yaml") // explicit
 	}
 
 	if err := viper.ReadInConfig(); err == nil {

@@ -51,3 +51,18 @@ func ResolvePrivateSSHHosts(flagSSH []string) []string {
 
 	return hostsSSH
 }
+func ResolveAuthMethod(flagMethod string) (string, error) {
+	var method string
+
+	if flagMethod != "" {
+		method = flagMethod
+	} else {
+		method = viper.GetString("git.auth_method")
+	}
+
+	if method != "ssh" && method != "https" {
+		return "", fmt.Errorf("invalid auth-method: '%s' (expected 'ssh' or 'https')", method)
+	}
+
+	return method, nil
+}

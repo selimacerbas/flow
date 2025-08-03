@@ -35,3 +35,5 @@ func SetGitAuthHTTPS(hosts []string, username, token string) error {
 
 	return nil
 }
+
+
