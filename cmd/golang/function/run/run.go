@@ -1,4 +1,4 @@
-package golang
+package run
 
 import (
 	"fmt"
@@ -16,60 +16,58 @@ import (
 	"github.com/selimacerbas/flow-cli/pkg/golang/function"
 )
 
-type FunctionCmd struct {
-	SrcDir            string
-	FunctionsSubdir   string
-	GoCleanCache      bool
-	GoEnableMod       bool
-	GoEnableVendor    bool
-	GoEnableBuild     bool
-	GoTargets         []string
-	GoCustomCommand   string
-	GoOS              string
-	GoArch            string
-	GoPrivate         []string
-	PrivateSSHHosts   []string
-	PrivateHTTPSHosts []string
-	AuthMethod        string
-	GitUsername       string
-	GitToken          string
-	DryRun            bool
-	Verbose           bool
+type RunCmd struct {
+	GoCleanCache    bool
+	GoEnableMod     bool
+	GoEnableVendor  bool
+	GoEnableBuild   bool
+	GoTargets       []string
+	GoCustomCommand string
+	GoOS            string
+	GoArch          string
+	GoPrivate       []string
+	AuthMethod      string
+	GitUsername     string
+	GitToken        string
 }
 
-var functionCmdDefaults = &FunctionCmd{
-	SrcDir:            "",
-	FunctionsSubdir:   "",
-	GoCleanCache:      false,
-	GoEnableMod:       false,
-	GoEnableVendor:    false,
-	GoEnableBuild:     false,
-	GoTargets:         []string{},
-	GoCustomCommand:   "",
-	GoOS:              "",
-	GoArch:            "",
-	GoPrivate:         []string{},
-	PrivateSSHHosts:   []string{},
-	PrivateHTTPSHosts: []string{},
-	AuthMethod:        "",
-	GitUsername:       "",
-	GitToken:          "",
-	DryRun:            false,
-	Verbose:           false,
+var runCmdDefaults = &RunCmd{
+	GoCleanCache:    false,
+	GoEnableMod:     false,
+	GoEnableVendor:  false,
+	GoEnableBuild:   false,
+	GoTargets:       []string{},
+	GoCustomCommand: "",
+	GoOS:            "",
+	GoArch:          "",
+	GoPrivate:       []string{},
+	AuthMethod:      "",
+	GitUsername:     "",
+	GitToken:        "",
 }
 
-var GoFunctionCmd = &cobra.Command{
+var GoRunCmd = &cobra.Command{
 	Use:   "function",
 	Short: "Manage Go cloud-functions (mod, vendor, build, clean)",
 	Run: func(cmd *cobra.Command, args []string) {
-		d := functionCmdDefaults
+		d := runCmdDefaults
+
+		srcDir, err := cmd.Flags().GetString("src-dir")
+		if err != nil {
+			log.Fatalf("failed to get src-dir flag: %v", err)
+		}
+
+		functionsSubdir, err := cmd.Flags().GetString("functions-subdir")
+		if err != nil {
+			log.Fatalf("failed to get functions-subdir flag: %v", err)
+		}
 
 		projectRoot, err := utils.DetectProjectRoot()
 		if err != nil {
 			log.Fatalf("failed to detect project root %v", err)
 		}
 
-		functionsDir, err := function.ResolveFunctionsDir(projectRoot, d.SrcDir, d.FunctionsSubdir)
+		functionsDir, err := function.ResolveFunctionsDir(projectRoot, srcDir, functionsSubdir)
 		if err != nil {
 			log.Fatalf("failed to resolve directories %v", err)
 		}
@@ -155,7 +153,7 @@ var GoFunctionCmd = &cobra.Command{
 					os.Exit(1)
 				}
 			}
-			if err := common.RunCustomCommand(targetDirs, d.GoCustomCommand, d.DryRun, d.Verbose); err != nil {
+			if err := common.RunCustomCommand(targetDirs, d.GoCustomCommand); err != nil {
 				log.Fatalf("Custom command failed: %v", err)
 			}
 		}
@@ -164,17 +162,8 @@ var GoFunctionCmd = &cobra.Command{
 }
 
 func init() {
-	d := functionCmdDefaults
-	f := GoFunctionCmd.Flags()
-
-	//utils
-	f.BoolVar(&d.DryRun, "dry-run", false, "Preview actions without executing commands (no side effects)")
-	f.BoolVar(&d.Verbose, "verbose", false, "Enable verbose output for command execution")
-
-	// function dirs
-	f.StringVar(&d.SrcDir, "src-dir", d.SrcDir, "Root source directory (default from config: dirs.src)")
-	f.StringVar(&d.FunctionsSubdir, "functions-subdir", d.FunctionsSubdir, "Subdirectory for cloud functions (default from config: dirs.functions_subdir)")
-	// f.StringVar(&ContainersSubdir, "containers-subdir", d.ContainersSubdir, "Subdirectory for containers (default from config: dirs.containers_subdir)")
+	d := runCmdDefaults
+	f := GoRunCmd.Flags()
 
 	// bind flags to struct fields using defaults
 	f.BoolVar(&d.GoCleanCache, "clean-cache", d.GoCleanCache, "Clean vendor & build dirs")
@@ -201,7 +190,4 @@ func init() {
 	_ = viper.BindPFlag("git.git-username", f.Lookup("git-username"))
 	_ = viper.BindPFlag("git.git-token", f.Lookup("git-token"))
 
-	_ = viper.BindPFlag("dirs.src", f.Lookup("src-dir"))
-	_ = viper.BindPFlag("dirs.functions_subdir", f.Lookup("functions-subdir"))
-	// _ = viper.BindPFlag("dirs.containers_subdir", f.Lookup("containers-subdir"))
 }

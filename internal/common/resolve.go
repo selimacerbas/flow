@@ -66,3 +66,30 @@ func ResolveAuthMethod(flagMethod string) (string, error) {
 
 	return method, nil
 }
+
+//  by default returns "latest"
+func ResolveImageTag(flagImageTag string) string {
+	if flagImageTag != "" {
+		return flagImageTag
+	}
+	if fromConfig := viper.GetString("image.tag"); fromConfig != "" {
+		return fromConfig
+	}
+	if fromEnv := os.Getenv("FLOW_IMAGE_TAG"); fromEnv != "" {
+		return fromEnv
+	}
+	return "latest" // optional default
+}
+
+func ResolveImageBuildMethod(flagMethod string) string {
+	if flagMethod != "" {
+		return flagMethod
+	}
+	if fromConfig := viper.GetString("image.build_method"); fromConfig != "" {
+		return fromConfig
+	}
+	if fromEnv := os.Getenv("FLOW_IMAGE_BUILD_METHOD"); fromEnv != "" {
+		return fromEnv
+	}
+	return "" // no default; user must explicitly choose
+}

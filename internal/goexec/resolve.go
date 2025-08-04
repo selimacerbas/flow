@@ -52,3 +52,5 @@ func ResolveENVGoArch(flagGoArch string) string {
 	}
 	return runtime.GOARCH // fallback to current arch
 }
+
+

@@ -5,16 +5,25 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/selimacerbas/flow-cli/cmd/golang"
 
 	"github.com/selimacerbas/flow-cli/internal/config"
 )
 
 type RootCmd struct {
-	Config string
+	Config          string
+	SrcDir          string
+	FunctionsSubdir string
+	ServicesSubdir  string
 }
 
 var rootCmdDefaults = &RootCmd{
-	Config: "",
+	Config:          "",
+	SrcDir:          "",
+	FunctionsSubdir: "",
+	ServicesSubdir:  "",
 }
 
 var rootCmd = &cobra.Command{
@@ -29,17 +38,26 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	rootCmd.AddCommand(goCmd)
+	rootCmd.AddCommand(golang.GoCmd)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
+
 func init() {
 	d := rootCmdDefaults
 	pf := rootCmd.PersistentFlags()
 
 	pf.StringVar(&d.Config, "config", d.Config, "Path to config file (default is flow.yaml or at project root)")
+
+	pf.StringVar(&d.SrcDir, "src-dir", d.SrcDir, "Root source directory (default from config: dirs.src)")
+	pf.StringVar(&d.FunctionsSubdir, "functions-subdir", d.FunctionsSubdir, "Subdirectory for cloud functions (default from config: dirs.functions_subdir)")
+	pf.StringVar(&d.ServicesSubdir, "services-subdir", d.ServicesSubdir, "Subdirectory for container services(default from config: dirs.services_subdir)")
+
 	config.SetDefaults()
+
+	_ = viper.BindPFlag("dirs.src", pf.Lookup("src-dir"))
+	_ = viper.BindPFlag("dirs.functions_subdir", pf.Lookup("functions-subdir"))
 
 }
