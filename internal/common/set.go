@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-func SetGitAuthSSH(hosts []string) error {
-	for _, host := range hosts {
+// expects comaseperated string
+func SetGitAuthSSH(hosts string) error {
+
+	hostsList := strings.Split(hosts, ",")
+	for _, host := range hostsList {
 		fmt.Printf("Configuring SSH for %s\n", host)
 		cmd := exec.Command("git", "config", "--global", fmt.Sprintf("url.git@%s:.insteadOf", host), fmt.Sprintf("https://%s/", host))
 		cmd.Stdout = os.Stdout
@@ -20,8 +24,11 @@ func SetGitAuthSSH(hosts []string) error {
 	return nil
 }
 
-func SetGitAuthHTTPS(hosts []string, username, token string) error {
-	for _, host := range hosts {
+// expects comaseperated string
+func SetGitAuthHTTPS(hosts string, username, token string) error {
+
+	hostsList := strings.Split(hosts, ",")
+	for _, host := range hostsList {
 		fmt.Printf("Configuring HTTPS token auth for %s\n", host)
 		authURL := fmt.Sprintf("https://%s:%s@%s/", username, token, host)
 		cmd := exec.Command("git", "config", "--global", fmt.Sprintf("url.%s.insteadOf", authURL), fmt.Sprintf("https://%s/", host))
@@ -35,5 +42,3 @@ func SetGitAuthHTTPS(hosts []string, username, token string) error {
 
 	return nil
 }
-
-

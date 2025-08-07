@@ -1,95 +1,65 @@
 package common
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/spf13/viper"
+	"github.com/selimacerbas/flow-cli/internal/utils"
 )
 
-func ResolveGitAuthHTTPSCredentials(flagUsername, flagToken string) (string, string, error) {
-	username := flagUsername
-	token := flagToken
-
-	if username == "" {
-		username = viper.GetString("git.username")
-	}
-	if token == "" {
-		token = viper.GetString("git.token")
-	}
-	if token == "" {
-		token = os.Getenv("GITHUB_TOKEN")
-	}
-	if username == "" || token == "" {
-		return "", "", fmt.Errorf("--git-username and --git-token is required when configuring private HTTPS hosts. consider passsing via flag, config or ENV")
-	}
-
-	return username, token, nil
+func ResolveSrcDir(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "dirs.src", "FLOW_SRC_DIR")
 }
 
-func ResolvePrivateHTTPSHosts(flagHTTPS []string) []string {
-	var hostsHTTPS []string
-
-	if len(flagHTTPS) > 0 {
-		hostsHTTPS = flagHTTPS
-	} else {
-		hostsHTTPS = viper.GetStringSlice("git.private_https_hosts")
-	}
-
-	return hostsHTTPS
+func ResolveFunctionsDir(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "dirs.functions_subdir", "FLOW_FUNCTIONS_SUBDIR")
 }
 
-func ResolvePrivateSSHHosts(flagSSH []string) []string {
-	var hostsSSH []string
-
-	// Use flags if passed; fallback to config for missing ones
-	if len(flagSSH) > 0 {
-		hostsSSH = flagSSH
-	} else {
-		hostsSSH = viper.GetStringSlice("git.private_ssh_hosts")
-	}
-
-	return hostsSSH
-}
-func ResolveAuthMethod(flagMethod string) (string, error) {
-	var method string
-
-	if flagMethod != "" {
-		method = flagMethod
-	} else {
-		method = viper.GetString("git.auth_method")
-	}
-
-	if method != "ssh" && method != "https" {
-		return "", fmt.Errorf("invalid auth-method: '%s' (expected 'ssh' or 'https')", method)
-	}
-
-	return method, nil
+func ResolveServicesDir(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "dirs.services_subdir", "FLOW_SERVICES_SUBDIR")
 }
 
-//  by default returns "latest"
-func ResolveImageTag(flagImageTag string) string {
-	if flagImageTag != "" {
-		return flagImageTag
-	}
-	if fromConfig := viper.GetString("image.tag"); fromConfig != "" {
-		return fromConfig
-	}
-	if fromEnv := os.Getenv("FLOW_IMAGE_TAG"); fromEnv != "" {
-		return fromEnv
-	}
-	return "latest" // optional default
+func ResolveGitUsername(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.username", "FLOW_GIT_USERNAME")
 }
 
-func ResolveImageBuildMethod(flagMethod string) string {
-	if flagMethod != "" {
-		return flagMethod
-	}
-	if fromConfig := viper.GetString("image.build_method"); fromConfig != "" {
-		return fromConfig
-	}
-	if fromEnv := os.Getenv("FLOW_IMAGE_BUILD_METHOD"); fromEnv != "" {
-		return fromEnv
-	}
-	return "" // no default; user must explicitly choose
+func ResolveGitToken(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.token", "FLOW_GIT_TOKEN", "GITHUB_TOKEN")
+}
+
+func ResolveAuthMethod(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.auth_method", "FLOW_AUTH_METHOD")
+}
+
+func ResolveImageTag(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "image.tag", "FLOW_IMAGE_TAG")
+}
+
+func ResolveImageRepository(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "image.repository", "FLOW_IMAGE_REPOSITORY")
+}
+
+func ResolveImageBuildMethod(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "image.build_method", "FLOW_IMAGE_BUILD_METHOD")
+}
+
+func ResolveCloudProvider(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "cloud.provider", "FLOW_CLOUD_PROVIDER")
+}
+
+func ResolveGCPRegion(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "cloud.gcp.region", "FLOW_GCP_REGION")
+}
+
+func ResolveGCPProjectId(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "cloud.gcp.project_id", "FLOW_GCP_PROJECT_ID")
+}
+
+func ResolveAWSAccountId(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "cloud.aws.account_id", "FLOW_AWS_ACCOUNT_ID")
+}
+
+func ResolveAWSRegion(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "cloud.aws.region", "FLOW_AWS_REGION")
+}
+
+func ResolveAzureRegistry(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "cloud.azure.registry", "FLOW_AZURE_REGISTRY")
 }

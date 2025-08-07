@@ -4,29 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/spf13/viper"
 )
 
-func ResolveServicesDir(projectRoot, flagSrcDir, flagServiceSubdir string) (string, error) {
-	// Priority: flag → config → default (already handled via Viper)
-	src := flagSrcDir
-	if src == "" {
-		src = viper.GetString("dirs.src")
-	}
+func FormAbsolutePathToServicesDir(projectRoot, srcDir, servicesSubdir string) string {
+	return filepath.Join(projectRoot, srcDir, servicesSubdir)
 
-	servicesSubdir := flagServiceSubdir
-	if servicesSubdir == "" {
-		servicesSubdir = viper.GetString("dirs.services_subdir")
-	}
-
-	servicesDir := filepath.Join(projectRoot, src, servicesSubdir)
-
-	return servicesDir, nil
 }
 
 // returns absolute path to target services
-func ResolveServiceTargetDirs(servicesDir string, targets []string) ([]string, error) {
+func FormAbsolutePathToServiceTargetDirs(servicesDir string, targets []string) ([]string, error) {
 	var resolved []string
 
 	if len(targets) > 0 {

@@ -17,38 +17,38 @@ import (
 )
 
 type RunCmd struct {
-	GoCleanCache    bool
-	GoEnableMod     bool
-	GoEnableVendor  bool
-	GoEnableBuild   bool
-	GoTargets       []string
-	GoCustomCommand string
-	GoOS            string
-	GoArch          string
-	GoPrivate       []string
-	AuthMethod      string
-	GitUsername     string
-	GitToken        string
+	CleanCache    bool
+	EnableMod     bool
+	EnableVendor  bool
+	EnableBuild   bool
+	Targets       []string
+	CustomCommand string
+	GoOS          string
+	GoArch        string
+	GoPrivate     string
+	AuthMethod    string
+	GitUsername   string
+	GitToken      string
 }
 
 var runCmdDefaults = &RunCmd{
-	GoCleanCache:    false,
-	GoEnableMod:     false,
-	GoEnableVendor:  false,
-	GoEnableBuild:   false,
-	GoTargets:       []string{},
-	GoCustomCommand: "",
-	GoOS:            "",
-	GoArch:          "",
-	GoPrivate:       []string{},
-	AuthMethod:      "",
-	GitUsername:     "",
-	GitToken:        "",
+	CleanCache:    false,
+	EnableMod:     false,
+	EnableVendor:  false,
+	EnableBuild:   false,
+	Targets:       []string{},
+	CustomCommand: "",
+	GoOS:          "",
+	GoArch:        "",
+	GoPrivate:     "",
+	AuthMethod:    "",
+	GitUsername:   "",
+	GitToken:      "",
 }
 
 var GoRunCmd = &cobra.Command{
-	Use:   "function",
-	Short: "Manage Go cloud-functions (mod, vendor, build, clean)",
+	Use:   "run",
+	Short: "Manage Go cloud-functions (mod, vendor, build, clean, custom)",
 	Run: func(cmd *cobra.Command, args []string) {
 		d := runCmdDefaults
 
@@ -67,18 +67,16 @@ var GoRunCmd = &cobra.Command{
 			log.Fatalf("failed to detect project root %v", err)
 		}
 
-		functionsDir, err := function.ResolveFunctionsDir(projectRoot, srcDir, functionsSubdir)
+		srcDir = common.ResolveSrcDir(srcDir)
+		functionsSubdir = common.ResolveFunctionsDir(functionsSubdir)
+		functionsDirAbsPath := function.FormAbsolutePathToFunctionsDir(projectRoot, srcDir, functionsSubdir)
+		targetDirs, err := function.FormAbsolutePathToFunctionTargetDirs(functionsDirAbsPath, d.Targets)
 		if err != nil {
-			log.Fatalf("failed to resolve directories %v", err)
-		}
-
-		targetDirs, err := function.ResolveFunctionTargetDirs(functionsDir, d.GoTargets)
-		if err != nil {
-			log.Fatalf("failed to resolve function targets %v", err)
+			log.Fatalf("failed to form absolute path to function targets %v", err)
 		}
 
 		// 3) clean cache
-		if d.GoCleanCache {
+		if d.CleanCache {
 			if err := goexec.RunGoClean(targetDirs); err != nil {
 				log.Fatalf("failed to run go clean %v", err)
 			}
@@ -91,11 +89,7 @@ var GoRunCmd = &cobra.Command{
 			log.Fatalf("failed to set GOPRIVATE: %v", err)
 		}
 
-		authMethod, err := common.ResolveAuthMethod(d.AuthMethod)
-		if err != nil {
-			log.Fatalf("failed to resolve auth method %v", err)
-		}
-
+		authMethod := common.ResolveAuthMethod(d.AuthMethod)
 		switch authMethod {
 		case "ssh":
 			err = common.SetGitAuthSSH(privateHosts)
@@ -104,10 +98,13 @@ var GoRunCmd = &cobra.Command{
 			}
 
 		case "https":
-			username, token, err := common.ResolveGitAuthHTTPSCredentials(d.GitUsername, d.GitToken)
-			if err != nil {
-				log.Fatalf("failed to resolve git auth HTTPS credentials %v", err)
+			username := common.ResolveGitUsername(d.GitUsername)
+			token := common.ResolveGitToken(d.GitToken)
+
+			if username == "" || token == "" {
+				log.Fatalf("--git-username and --git-token is required when configuring private HTTPS hosts. consider passsing via flag, config or ENV")
 			}
+
 			err = common.SetGitAuthHTTPS(privateHosts, username, token)
 			if err != nil {
 				log.Fatalf("failed to git auth HTTPS %v", err)
@@ -120,7 +117,7 @@ var GoRunCmd = &cobra.Command{
 			log.Fatalf("invalid auth-method: %q (expected 'ssh' or 'https')", authMethod)
 		}
 
-		if d.GoEnableMod {
+		if d.EnableMod {
 			err = goexec.RunGoMod(targetDirs)
 			if err != nil {
 				log.Fatalf("failed to run go mod %v", err)
@@ -128,7 +125,7 @@ var GoRunCmd = &cobra.Command{
 			}
 		}
 
-		if d.GoEnableVendor {
+		if d.EnableVendor {
 			err = goexec.RunGoVendor(targetDirs)
 			if err != nil {
 				log.Fatalf("failed to run go vendor %v", err)
@@ -136,7 +133,7 @@ var GoRunCmd = &cobra.Command{
 			}
 		}
 
-		if d.GoEnableBuild {
+		if d.EnableBuild {
 			goOS := goexec.ResolveENVGoOS(d.GoOS)
 			goArch := goexec.ResolveENVGoArch(d.GoArch)
 			err = goexec.RunGoBuild(targetDirs, goOS, goArch)
@@ -146,14 +143,14 @@ var GoRunCmd = &cobra.Command{
 			}
 		}
 
-		if d.GoCustomCommand != "" {
-			if !strings.HasPrefix(d.GoCustomCommand, "go ") {
+		if d.CustomCommand != "" {
+			if !strings.HasPrefix(d.CustomCommand, "go ") {
 				err := fmt.Errorf("only `go` commands are allowed with --command or -c")
 				if err != nil {
 					os.Exit(1)
 				}
 			}
-			if err := common.RunCustomCommand(targetDirs, d.GoCustomCommand); err != nil {
+			if err := common.RunCustomCommand(targetDirs, d.CustomCommand); err != nil {
 				log.Fatalf("Custom command failed: %v", err)
 			}
 		}
@@ -166,16 +163,16 @@ func init() {
 	f := GoRunCmd.Flags()
 
 	// bind flags to struct fields using defaults
-	f.BoolVar(&d.GoCleanCache, "clean-cache", d.GoCleanCache, "Clean vendor & build dirs")
-	f.BoolVarP(&d.GoEnableMod, "mod", "m", d.GoEnableMod, "Run go mod tidy")
-	f.BoolVarP(&d.GoEnableVendor, "vendor", "v", d.GoEnableVendor, "Run go mod vendor")
-	f.BoolVarP(&d.GoEnableBuild, "build", "b", d.GoEnableBuild, "Build function binaries")
-	f.StringSliceVarP(&d.GoTargets, "target", "t", d.GoTargets, "List of function names")
-	f.StringVarP(&d.GoCustomCommand, "command", "c", "", "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
+	f.BoolVar(&d.CleanCache, "clean-cache", d.CleanCache, "Clean vendor & build dirs")
+	f.BoolVarP(&d.EnableMod, "mod", "m", d.EnableMod, "Run go mod tidy")
+	f.BoolVarP(&d.EnableVendor, "vendor", "v", d.EnableVendor, "Run go mod vendor")
+	f.BoolVarP(&d.EnableBuild, "build", "b", d.EnableBuild, "Build function binaries")
+	f.StringSliceVarP(&d.Targets, "target", "t", d.Targets, "List of function names")
+	f.StringVarP(&d.CustomCommand, "command", "c", "", "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
 
 	f.StringVar(&d.GoOS, "os", d.GoOS, "Target OS (overrides config.go.os)")
 	f.StringVar(&d.GoArch, "arch", d.GoArch, "Target ARCH (overrides config.go.arch)")
-	f.StringSliceVar(&d.GoPrivate, "private", d.GoPrivate, "List of private module hosts (e.g. github.com, gitlab.com)")
+	f.StringVar(&d.GoPrivate, "private", d.GoPrivate, "Coma separated private module hosts (e.g. github.com,gitlab.com)")
 
 	f.StringVar(&d.AuthMethod, "auth-method", "", "Git authentication method to use (ssh or https)")
 	f.StringVar(&d.GitUsername, "git-username", d.GitUsername, "Git username for HTTPS")

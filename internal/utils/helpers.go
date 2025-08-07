@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/viper"
 )
 
 // DetectProjectRoot walks up from current dir to find the repo root (with go.mod).
@@ -27,3 +29,19 @@ func DetectProjectRoot() (string, error) {
 
 	return "", fmt.Errorf("go.mod not found in any parent directory")
 }
+
+func ResolveStringValue(flagVal, configKey string, envVars ...string) string {
+	if flagVal != "" {
+		return flagVal
+	}
+	if fromConfig := viper.GetString(configKey); fromConfig != "" {
+		return fromConfig
+	}
+	for _, env := range envVars {
+		if val := os.Getenv(env); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+

@@ -5,29 +5,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/viper"
 )
 
-func ResolveFunctionsDir(projectRoot, flagSrcDir, flagFunctionsSubdir string) (string, error) {
-	// Priority: flag → config → default (already handled via Viper)
-	src := flagSrcDir
-	if src == "" {
-		src = viper.GetString("dirs.src")
-	}
+func FormAbsolutePathToFunctionsDir(projectRoot, srcDir, functionsSubdir string) string {
+	return filepath.Join(projectRoot, srcDir, functionsSubdir)
 
-	functionsSubdir := flagFunctionsSubdir
-	if functionsSubdir == "" {
-		functionsSubdir = viper.GetString("dirs.functions_subdir")
-	}
-
-	functionsDir := filepath.Join(projectRoot, src, functionsSubdir)
-
-	return functionsDir, nil
 }
 
 // returns absolute path to target functions
-func ResolveFunctionTargetDirs(functionsDir string, targets []string) ([]string, error) {
-	var resolved []string
+func FormAbsolutePathToFunctionTargetDirs(functionsDir string, targets []string) ([]string, error) {
+	var formed []string
 
 	if len(targets) > 0 {
 		// Specific targets passed via --target
@@ -36,7 +23,7 @@ func ResolveFunctionTargetDirs(functionsDir string, targets []string) ([]string,
 			if _, err := os.Stat(full); os.IsNotExist(err) {
 				return nil, fmt.Errorf("target %s does not exist at path %s", t, full)
 			}
-			resolved = append(resolved, full)
+			formed = append(formed, full)
 		}
 	} else {
 		// No targets passed: resolve all directories in functionsDir
@@ -46,10 +33,10 @@ func ResolveFunctionTargetDirs(functionsDir string, targets []string) ([]string,
 		}
 		for _, entry := range entries {
 			if entry.IsDir() {
-				resolved = append(resolved, filepath.Join(functionsDir, entry.Name()))
+				formed = append(formed, filepath.Join(functionsDir, entry.Name()))
 			}
 		}
 	}
 
-	return resolved, nil
+	return formed, nil
 }

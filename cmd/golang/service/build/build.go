@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/selimacerbas/flow-cli/internal/common"
-	"github.com/selimacerbas/flow-cli/internal/goexec"
 	"github.com/selimacerbas/flow-cli/internal/utils"
 
 	"github.com/selimacerbas/flow-cli/pkg/golang/service"
@@ -20,43 +19,34 @@ import (
 
 type BuildCmd struct {
 	ImageTag         string
-	ImageVersion     string
+	ImageRepository  string
 	ImageBuildMethod string
 	Targets          []string
 	CustomCommand    string
 	CloudProvider    string
-	CloudRegion      string
-	CloudProjectId   string
+	GCPRegion        string
+	GCPProjectId     string
+	AWSRegion        string
+	AWSAccountId     string
+	AZURERegistry    string
 }
 
 var buildCmdDefaults = &BuildCmd{
 	ImageTag:         "",
-	ImageVersion:     "",
+	ImageRepository:  "",
 	ImageBuildMethod: "",
-	CloudProvider:    "",
-	CloudRegion:      "",
-	CloudProjectId:   "",
 	Targets:          []string{},
 	CustomCommand:    "",
+	CloudProvider:    "",
+	GCPRegion:        "",
+	GCPProjectId:     "",
+	AWSRegion:        "",
+	AWSAccountId:     "",
+	AZURERegistry:    "",
 }
-var (
-	goImgCleanCache   bool
-	goImgEnableMod    bool
-	goImgEnableVendor bool
-	goImgLocal        bool
-	goImgCloud        bool
-	goImgDocker       bool
-	goImgFromPrivate  bool
-	goImgUseSSH       bool
-	goImgUseHTTPS     bool
-	goImgTargets      []string
 
-	goImgVersion string
-	goImgTag     string
-)
-
-var GoServiceCmd = &cobra.Command{
-	Use:   "service",
+var GoBuildCmd = &cobra.Command{
+	Use:   "build",
 	Short: "Manage Go container images (clean, mod/vendor, local/cloud/docker builds)",
 	Run: func(cmd *cobra.Command, args []string) {
 		d := buildCmdDefaults
@@ -76,16 +66,13 @@ var GoServiceCmd = &cobra.Command{
 			log.Fatalf("failed to detect project root %v", err)
 		}
 
-		servicesDir, err := service.ResolveServicesDir(projectRoot, srcDir, servicesSubdir)
+		srcDir = common.ResolveSrcDir(srcDir)
+		servicesSubdir = common.ResolveFunctionsDir(servicesSubdir)
+		servicesDirAbsPath := service.FormAbsolutePathToServicesDir(projectRoot, srcDir, servicesSubdir)
+		targetDirs, err := service.FormAbsolutePathToServiceTargetDirs(servicesDirAbsPath, d.Targets)
 		if err != nil {
-			log.Fatalf("failed to resolve directories %v", err)
+			log.Fatalf("failed to form absolute path to function targets %v", err)
 		}
-
-		targetDirs, err := service.ResolveServiceTargetDirs(servicesDir, d.Targets)
-		if err != nil {
-			log.Fatalf("failed to resolve service targets %v", err)
-		}
-
 
 		if d.CustomCommand != "" {
 			if !strings.HasPrefix(d.CustomCommand, "go ") {
@@ -99,11 +86,18 @@ var GoServiceCmd = &cobra.Command{
 			}
 		}
 
-		imageBuildMethod := common.ResolveImageBuildMethod(d.ImageBuildMethod)
 		imageTag := common.ResolveImageTag(d.ImageTag)
+		imageRepository := common.ResolveImageRepository(d.ImageRepository)
+		imageBuildMethod := common.ResolveImageBuildMethod(d.ImageBuildMethod)
+		cloudProvider := common.ResolveCloudProvider(d.CloudProvider)
+		gcpRegion := common.ResolveGCPRegion(d.GCPRegion)
+		gcpProjectId := common.ResolveGCPProjectId(d.GCPProjectId)
+		awsRegion := common.ResolveAWSRegion(d.AWSRegion)
+		awsAccountId := common.ResolveAWSAccountId(d.AWSAccountId)
+		azureRegistry := common.ResolveAzureRegistry(d.AZURERegistry)
 
-		switch imageBuildMethod {
-		case "local":
+		switch {
+		case imageBuildMethod == "local":
 			fmt.Println("Building local Docker images...")
 			for _, dir := range targetDirs {
 				name := filepath.Base(dir)
@@ -112,158 +106,153 @@ var GoServiceCmd = &cobra.Command{
 				cmd := exec.Command("docker", "build", "-t", tag, dir)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
-
 				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "Local build failed for %s: %v\n", name, err)
-					os.Exit(1)
+					log.Fatalf("docker build failed for %s: %v", name, err)
 				}
 			}
 
-		case "docker":
-			fmt.Println("Building & pushing Docker images...")
+		case cloudProvider == "gcp" && imageBuildMethod == "docker":
+			if gcpRegion == "" || gcpProjectId == "" {
+				log.Fatal("--gcp-region and --gcp-project are required for GCP docker builds")
+			}
+			fmt.Println("Building & pushing GCP Docker images...")
 			for _, dir := range targetDirs {
 				name := filepath.Base(dir)
-				// GCP Artifact Registry Image Tag/URL looks like this, [LOCATION]-docker.pkg.dev/[PROJECT-ID]/[REPOSITORY]/[IMAGE]:[TAG]
-				tag := fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s:%s", region, project, repo, name, imageTag)
+				tag := fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s:%s",
+					gcpRegion, gcpProjectId, imageRepository, name, imageTag,
+				)
+
+				// build
+				buildCmd := exec.Command("docker", "build", "-t", tag, dir)
+				buildCmd.Stdout = os.Stdout
+				buildCmd.Stderr = os.Stderr
+				if err := buildCmd.Run(); err != nil {
+					log.Fatalf("docker build failed for %s: %v", name, err)
+				}
+
+				// push
+				pushCmd := exec.Command("docker", "push", tag)
+				pushCmd.Stdout = os.Stdout
+				pushCmd.Stderr = os.Stderr
+				if err := pushCmd.Run(); err != nil {
+					log.Fatalf("docker push failed for %s: %v", name, err)
+				}
+			}
+
+		case cloudProvider == "aws" && imageBuildMethod == "docker":
+			if awsAccountId == "" || awsRegion == "" {
+				log.Fatal("--aws-account and --aws-region is required for AWS docker builds")
+			}
+
+			fmt.Println("Building & pushing AWS ECR images...")
+			for _, dir := range targetDirs {
+				name := filepath.Base(dir)
+				tag := fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com/%s:%s",
+					awsAccountId, awsRegion, imageRepository, imageTag,
+				)
 
 				buildCmd := exec.Command("docker", "build", "-t", tag, dir)
 				buildCmd.Stdout = os.Stdout
 				buildCmd.Stderr = os.Stderr
-
 				if err := buildCmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "Build failed for %s: %v\n", name, err)
-					os.Exit(1)
+					log.Fatalf("docker build failed for %s: %v", name, err)
 				}
 
 				pushCmd := exec.Command("docker", "push", tag)
 				pushCmd.Stdout = os.Stdout
 				pushCmd.Stderr = os.Stderr
-
 				if err := pushCmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "Push failed for %s: %v\n", name, err)
-					os.Exit(1)
+					log.Fatalf("docker push failed for %s: %v", name, err)
 				}
 			}
 
-		case "cloud-build":
-			fmt.Println("→ Submitting Cloud Build jobs...")
+		case cloudProvider == "azure" && imageBuildMethod == "docker":
+			if azureRegistry == "" {
+				log.Fatal("--azure-registry is required for Azure docker builds")
+			}
+			fmt.Println("Building & pushing Azure ACR images...")
+			for _, dir := range targetDirs {
+				name := filepath.Base(dir)
+				tag := fmt.Sprintf("%s.azurecr.io/%s:%s", azureRegistry, imageRepository, imageTag)
+
+				buildCmd := exec.Command("docker", "build", "-t", tag, dir)
+				buildCmd.Stdout = os.Stdout
+				buildCmd.Stderr = os.Stderr
+				if err := buildCmd.Run(); err != nil {
+					log.Fatalf("docker build failed for %s: %v", name, err)
+				}
+
+				pushCmd := exec.Command("docker", "push", tag)
+				pushCmd.Stdout = os.Stdout
+				pushCmd.Stderr = os.Stderr
+				if err := pushCmd.Run(); err != nil {
+					log.Fatalf("docker push failed for %s: %v", name, err)
+				}
+			}
+
+		case cloudProvider == "gcp" && imageBuildMethod == "cloud-build":
+			if gcpRegion == "" || gcpProjectId == "" {
+				log.Fatal("--gcp-region and --gcp-project are required for GCP cloud-build")
+			}
+			fmt.Println("→ Submitting GCP Cloud Build jobs...")
 			for _, dir := range targetDirs {
 				name := filepath.Base(dir)
 				substs := fmt.Sprintf("_SERVICE=%s,_REGION=%s,_PROJECT=%s,_REPOSITORY=%s,_TAG=%s",
-					name, region, project, repo, imageTag,
+					name, gcpRegion, gcpProjectId, imageRepository, imageTag,
 				)
-
-				cmd := exec.Command("gcloud", "builds", "submit", dir,
+				cmd := exec.Command(
+					"gcloud", "builds", "submit", dir,
 					"--config="+filepath.Join(dir, "cloudbuild.yaml"),
 					"--substitutions="+substs,
 				)
-
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
-
 				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "❌ Cloud Build failed for %s: %v\n", name, err)
-					os.Exit(1)
+					log.Fatalf("gcloud build submit failed for %s: %v", name, err)
 				}
 			}
+
+		case imageBuildMethod == "":
+			// noting to built
 
 		default:
-			fmt.Fprintln(os.Stderr, "❌ No valid build method selected. Use --build-method flag.")
-			os.Exit(1)
-		}
-		// image builds
-		switch {
-		case goImgLocal:
-			fmt.Println("Building local Docker images (tag=", goImgTag, ")…")
-			for _, dir := range utils.DirList(servicesDir, goImgTargets) {
-				name := filepath.Base(dir)
-				cmd := utils.ExecCommand("docker", "build", "-t", "local/"+name+":"+goImgTag, dir)
-				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "local build failed for %s: %v\n", name, err)
-					os.Exit(1)
-				}
-			}
-
-		case goImgCloud:
-			region := viper.GetString("cloud.region")
-			proj := viper.GetString("cloud.project")
-			repo := viper.GetString("cloud.repository")
-			if region == "" || proj == "" || repo == "" {
-				fmt.Fprintln(os.Stderr, "cloud.region, cloud.project and cloud.repository must be set")
-				os.Exit(1)
-			}
-			fmt.Println("Triggering Cloud Build…")
-			for _, dir := range utils.DirList(servicesDir, goImgTargets) {
-				name := filepath.Base(dir)
-				substs := fmt.Sprintf("_SERVICE=%s,_REGION=%s,_PROJECT=%s,_REPOSITORY=%s,_TAG=%s",
-					name, region, proj, repo, goImgTag,
-				)
-				cmd := utils.ExecCommand("gcloud", "builds", "submit", dir,
-					"--config="+filepath.Join(dir, "cloudbuild.yaml"),
-					"--substitutions="+substs,
-					"--async",
-				)
-				if err := cmd.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "cloud build submit failed for %s: %v\n", name, err)
-					os.Exit(1)
-				}
-			}
-
-		case goImgDocker:
-			region := viper.GetString("cloud.region")
-			proj := viper.GetString("cloud.project")
-			repo := viper.GetString("cloud.repository")
-			if region == "" || proj == "" || repo == "" {
-				fmt.Fprintln(os.Stderr, "cloud.region, cloud.project and cloud.repository must be set")
-				os.Exit(1)
-			}
-			fmt.Println("Building & pushing Docker images…")
-			for _, dir := range utils.DirList(servicesDir, goImgTargets) {
-				name := filepath.Base(dir)
-				imageTag := fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s:%s",
-					region, proj, repo, name, goImgTag,
-				)
-				c := utils.ExecCommand("docker", "build", "-t", imageTag, dir)
-				if err := c.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "docker build failed: %v\n", err)
-					os.Exit(1)
-				}
-				c = utils.ExecCommand("docker", "push", imageTag)
-				if err := c.Run(); err != nil {
-					fmt.Fprintf(os.Stderr, "docker push failed: %v\n", err)
-					os.Exit(1)
-				}
-			}
-		default:
-			fmt.Println("No build strategy selected; use --local-build, --cloud-build, or --docker-build.")
+			log.Fatalf("unsupported combination: provider=%q method=%q", cloudProvider, imageBuildMethod)
 		}
 	},
 }
 
 func init() {
-	d := serviceCmdDefaults
-	f := GoServiceCmd.Flags()
+	d := buildCmdDefaults
+	f := GoBuildCmd.Flags()
 
-	f.StringVar(&d.ImageBuildMethod, "image-build-method", d.ImageBuildMethod, "Image build method (one of: local, docker, cloud-build)")
-	// original flags
-	f.BoolVar(&goImgCleanCache, "clean-cache", false, "Clean vendor & build dirs")
-	f.BoolVarP(&goImgEnableMod, "mod", "m", false, "Run go mod tidy")
-	f.BoolVarP(&goImgEnableVendor, "vendor", "v", false, "Run go mod vendor")
-	f.BoolVar(&goImgLocal, "local-build", false, "Local Docker builds")
-	f.BoolVar(&goImgCloud, "cloud-build", false, "Trigger Cloud Build")
-	f.BoolVar(&goImgDocker, "docker-build", false, "Docker build & push")
-	f.StringSliceVarP(&goImgTargets, "target", "t", nil, "Comma-separated list of services (default=all)")
+	// image settings
+	f.StringVar(&d.ImageTag, "image-tag", d.ImageTag, "Image tag")
+	f.StringVar(&d.ImageRepository, "image-repository", d.ImageRepository, "Image repository")
+	f.StringVar(&d.ImageBuildMethod, "image-build-method", d.ImageBuildMethod, "Image build method (local|docker|cloud-build)")
+	// targets & custom command
+	f.StringSliceVarP(&d.Targets, "target", "t", d.Targets, "List of service names")
+	f.StringVarP(&d.CustomCommand, "command", "c", "", "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
 
-	// language-specific & image
-	f.StringVar(&goImgVersion, "go-version", "", "Go version (overrides config.go.default_version)")
-	f.StringVar(&goImgTag, "tag", "", "Image tag (overrides config.image.tag)")
+	// cloud provider settings
+	f.StringVar(&d.CloudProvider, "cloud-provider", d.CloudProvider, "Cloud provider (gcp|aws|azure)")
+	f.StringVar(&d.GCPRegion, "gcp-region", d.GCPRegion, "GCP region")
+	f.StringVar(&d.GCPProjectId, "gcp-project-id", d.GCPProjectId, "GCP project ID")
+	f.StringVar(&d.AWSRegion, "aws-region", d.AWSRegion, "AWS region")
+	f.StringVar(&d.AWSAccountId, "aws-account-id", d.AWSAccountId, "AWS account ID")
+	f.StringVar(&d.AZURERegistry, "azure-registry", d.AZURERegistry, "Azure registry")
 
-	// auth flags
-	f.BoolVar(&goImgFromPrivate, "from-private", false, "Enable private module support")
-	f.BoolVar(&goImgUseSSH, "use-ssh", false, "Use SSH for private git")
-	f.BoolVar(&goImgUseHTTPS, "use-https", false, "Use HTTPS+GITHUB_TOKEN for private git")
+	// bind to viper
+	_ = viper.BindPFlag("image.tag", f.Lookup("image-tag"))
+	_ = viper.BindPFlag("image.repository", f.Lookup("image-repository"))
+	_ = viper.BindPFlag("image.build_method", f.Lookup("image-build-method"))
 
-	// bind into Viper
-	_ = viper.BindPFlag("go.default_version", f.Lookup("go-version"))
-	_ = viper.BindPFlag("image.tag", f.Lookup("tag"))
+	_ = viper.BindPFlag("cloud.provider", f.Lookup("cloud-provider"))
+	_ = viper.BindPFlag("cloud.gcp.region", f.Lookup("gcp-region"))
+	_ = viper.BindPFlag("cloud.gcp.project_id", f.Lookup("gcp-project-id"))
+	_ = viper.BindPFlag("cloud.aws.region", f.Lookup("aws-region"))
+	_ = viper.BindPFlag("cloud.aws.account_id", f.Lookup("aws-account-id"))
+	_ = viper.BindPFlag("cloud.azure.registry", f.Lookup("azure-registry"))
+
+	// required flags
+	// _ = GoBuildCmd.MarkFlagRequired("image-build-method")
 }
