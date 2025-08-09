@@ -1,4 +1,4 @@
-package goexec
+package golang
 
 import (
 	"runtime"

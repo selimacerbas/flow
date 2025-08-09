@@ -17,7 +17,7 @@ import (
 	"github.com/selimacerbas/flow-cli/pkg/golang/service"
 )
 
-type BuildCmd struct {
+type BuildOptions struct {
 	ImageTag         string
 	ImageRepository  string
 	ImageBuildMethod string
@@ -31,7 +31,7 @@ type BuildCmd struct {
 	AZURERegistry    string
 }
 
-var buildCmdDefaults = &BuildCmd{
+var buildCmdDefaults = &BuildOptions{
 	ImageTag:         "",
 	ImageRepository:  "",
 	ImageBuildMethod: "",
@@ -45,18 +45,54 @@ var buildCmdDefaults = &BuildCmd{
 	AZURERegistry:    "",
 }
 
-var GoBuildCmd = &cobra.Command{
-	Use:   "build",
+func init() {
+	d := buildCmdDefaults
+	f := BuildCmd.Flags()
+
+	// image settings
+	f.StringVar(&d.ImageTag, "image-tag", d.ImageTag, "Image tag")
+	f.StringVar(&d.ImageRepository, "image-repository", d.ImageRepository, "Image repository")
+	f.StringVar(&d.ImageBuildMethod, "image-build-method", d.ImageBuildMethod, "Image build method (local|docker|cloud-build)")
+	// targets & custom command
+	f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "List of service names")
+	f.StringVarP(&d.CustomCommand, "command", "c", "", "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
+
+	// cloud provider settings
+	f.StringVar(&d.CloudProvider, "cloud-provider", d.CloudProvider, "Cloud provider (gcp|aws|azure)")
+	f.StringVar(&d.GCPRegion, "gcp-region", d.GCPRegion, "GCP region")
+	f.StringVar(&d.GCPProjectId, "gcp-project-id", d.GCPProjectId, "GCP project ID")
+	f.StringVar(&d.AWSRegion, "aws-region", d.AWSRegion, "AWS region")
+	f.StringVar(&d.AWSAccountId, "aws-account-id", d.AWSAccountId, "AWS account ID")
+	f.StringVar(&d.AZURERegistry, "azure-registry", d.AZURERegistry, "Azure registry")
+
+	// bind to viper
+	_ = viper.BindPFlag("image.tag", f.Lookup("image-tag"))
+	_ = viper.BindPFlag("image.repository", f.Lookup("image-repository"))
+	_ = viper.BindPFlag("image.build_method", f.Lookup("image-build-method"))
+
+	_ = viper.BindPFlag("cloud.provider", f.Lookup("cloud-provider"))
+	_ = viper.BindPFlag("cloud.gcp.region", f.Lookup("gcp-region"))
+	_ = viper.BindPFlag("cloud.gcp.project_id", f.Lookup("gcp-project-id"))
+	_ = viper.BindPFlag("cloud.aws.region", f.Lookup("aws-region"))
+	_ = viper.BindPFlag("cloud.aws.account_id", f.Lookup("aws-account-id"))
+	_ = viper.BindPFlag("cloud.azure.registry", f.Lookup("azure-registry"))
+
+	// required flags
+	// _ = GoBuildCmd.MarkFlagRequired("image-build-method")
+}
+
+var BuildCmd = &cobra.Command{
+	Use:   "build ...",
 	Short: "Manage Go container images (clean, mod/vendor, local/cloud/docker builds)",
 	Run: func(cmd *cobra.Command, args []string) {
 		d := buildCmdDefaults
 
-		srcDir, err := cmd.Flags().GetString("src-dir")
+		srcDir, err := cmd.Flags().GetString(common.FlagSrcDir)
 		if err != nil {
 			log.Fatalf("failed to get src-dir flag: %v", err)
 		}
 
-		servicesSubdir, err := cmd.Flags().GetString("services-subdir")
+		servicesSubdir, err := cmd.Flags().GetString(common.FlagServicesSubDir)
 		if err != nil {
 			log.Fatalf("failed to get functions-subdir flag: %v", err)
 		}
@@ -219,40 +255,4 @@ var GoBuildCmd = &cobra.Command{
 			log.Fatalf("unsupported combination: provider=%q method=%q", cloudProvider, imageBuildMethod)
 		}
 	},
-}
-
-func init() {
-	d := buildCmdDefaults
-	f := GoBuildCmd.Flags()
-
-	// image settings
-	f.StringVar(&d.ImageTag, "image-tag", d.ImageTag, "Image tag")
-	f.StringVar(&d.ImageRepository, "image-repository", d.ImageRepository, "Image repository")
-	f.StringVar(&d.ImageBuildMethod, "image-build-method", d.ImageBuildMethod, "Image build method (local|docker|cloud-build)")
-	// targets & custom command
-	f.StringSliceVarP(&d.Targets, "target", "t", d.Targets, "List of service names")
-	f.StringVarP(&d.CustomCommand, "command", "c", "", "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
-
-	// cloud provider settings
-	f.StringVar(&d.CloudProvider, "cloud-provider", d.CloudProvider, "Cloud provider (gcp|aws|azure)")
-	f.StringVar(&d.GCPRegion, "gcp-region", d.GCPRegion, "GCP region")
-	f.StringVar(&d.GCPProjectId, "gcp-project-id", d.GCPProjectId, "GCP project ID")
-	f.StringVar(&d.AWSRegion, "aws-region", d.AWSRegion, "AWS region")
-	f.StringVar(&d.AWSAccountId, "aws-account-id", d.AWSAccountId, "AWS account ID")
-	f.StringVar(&d.AZURERegistry, "azure-registry", d.AZURERegistry, "Azure registry")
-
-	// bind to viper
-	_ = viper.BindPFlag("image.tag", f.Lookup("image-tag"))
-	_ = viper.BindPFlag("image.repository", f.Lookup("image-repository"))
-	_ = viper.BindPFlag("image.build_method", f.Lookup("image-build-method"))
-
-	_ = viper.BindPFlag("cloud.provider", f.Lookup("cloud-provider"))
-	_ = viper.BindPFlag("cloud.gcp.region", f.Lookup("gcp-region"))
-	_ = viper.BindPFlag("cloud.gcp.project_id", f.Lookup("gcp-project-id"))
-	_ = viper.BindPFlag("cloud.aws.region", f.Lookup("aws-region"))
-	_ = viper.BindPFlag("cloud.aws.account_id", f.Lookup("aws-account-id"))
-	_ = viper.BindPFlag("cloud.azure.registry", f.Lookup("azure-registry"))
-
-	// required flags
-	// _ = GoBuildCmd.MarkFlagRequired("image-build-method")
 }

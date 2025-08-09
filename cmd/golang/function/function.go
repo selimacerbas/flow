@@ -6,16 +6,16 @@ import (
 	"github.com/selimacerbas/flow-cli/cmd/golang/function/run"
 )
 
-type FunctionCmd struct{}
+type FunctionOptions struct{}
 
 // Activate this in case we pass value to it.
-// var functionCmdDefaults = &FunctionCmd{}
+// var functionCmdDefaults = &FunctionOptions{}
 
-var GoFunctionCmd = &cobra.Command{
+var FunctionCmd = &cobra.Command{
 	Use:   "function",
 	Short: "Manage Go cloud-functions (mod, vendor, build, clean)",
 }
 
 func init() {
-	GoFunctionCmd.AddCommand(run.GoRunCmd)
+	FunctionCmd.AddCommand(run.RunCmd)
 }

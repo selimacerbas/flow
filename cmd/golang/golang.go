@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/selimacerbas/flow-cli/cmd/golang/function"
+	"github.com/selimacerbas/flow-cli/cmd/golang/service"
 )
 
 var GoCmd = &cobra.Command{
@@ -13,6 +14,6 @@ var GoCmd = &cobra.Command{
 }
 
 func init() {
-	GoCmd.AddCommand(function.GoFunctionCmd)
-	// GoCmd.AddCommand(golang.GoImageCmd)
+	GoCmd.AddCommand(function.FunctionCmd)
+	GoCmd.AddCommand(service.ServiceCmd)
 }

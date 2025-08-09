@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/selimacerbas/flow-cli/cmd/get"
 	"github.com/selimacerbas/flow-cli/cmd/golang"
 
 	"github.com/selimacerbas/flow-cli/internal/config"
@@ -38,7 +39,10 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	rootCmd.AddCommand(golang.GoCmd)
+	rootCmd.AddCommand(
+		golang.GoCmd,
+		get.GetCmd,
+	)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -59,5 +63,6 @@ func init() {
 
 	_ = viper.BindPFlag("dirs.src", pf.Lookup("src-dir"))
 	_ = viper.BindPFlag("dirs.functions_subdir", pf.Lookup("functions-subdir"))
+	_ = viper.BindPFlag("dirs.services_subdir", pf.Lookup("services-subdir"))
 
 }
