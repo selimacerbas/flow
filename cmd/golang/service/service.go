@@ -7,7 +7,7 @@ import (
 	"github.com/selimacerbas/flow-cli/cmd/golang/service/run"
 )
 
-type ServiceOptions struct{}
+type ServiceCmdOptions struct{}
 
 // Activate this in case we pass value to it.
 // var serviceCmdDefaults = &ServiceOptions{}

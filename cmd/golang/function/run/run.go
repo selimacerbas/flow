@@ -16,7 +16,7 @@ import (
 	"github.com/selimacerbas/flow-cli/pkg/golang/function"
 )
 
-type RunOptions struct {
+type RunCmdOptions struct {
 	Targets       []string
 	CustomCommand string
 	GoOS          string
@@ -27,7 +27,7 @@ type RunOptions struct {
 	GitToken      string
 }
 
-var runCmdDefaults = &RunOptions{
+var defaults = &RunCmdOptions{
 	Targets:       []string{},
 	CustomCommand: "",
 	GoOS:          "",
@@ -38,18 +38,61 @@ var runCmdDefaults = &RunOptions{
 	GitToken:      "",
 }
 
+type RunSubCmds struct {
+	Clean  string
+	Mod    string
+	Vendor string
+	Build  string
+	Custom string
+}
+
+var subs = &RunSubCmds{
+	Clean:  "clean",
+	Mod:    "mod",
+	Vendor: "vendor",
+	Build:  "build",
+	Custom: "custom",
+}
+
+func init() {
+	d := defaults
+	f := RunCmd.Flags()
+
+	// I would want to
+	// keep the flags users can pass to any operation
+	f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "List of function names")
+	f.StringVarP(&d.CustomCommand, "command", "c", d.CustomCommand, "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
+
+	f.StringVar(&d.GoOS, "os", d.GoOS, "Target OS (overrides config.go.os)")
+	f.StringVar(&d.GoArch, "arch", d.GoArch, "Target ARCH (overrides config.go.arch)")
+	f.StringVar(&d.GoPrivate, "private", d.GoPrivate, "Coma separated private module hosts (e.g. github.com,gitlab.com)")
+
+	f.StringVar(&d.AuthMethod, "auth-method", d.AuthMethod, "Git authentication method to use (ssh or https)")
+	f.StringVar(&d.GitUsername, "git-username", d.GitUsername, "Git username for HTTPS")
+	f.StringVar(&d.GitToken, "git-token", d.GitToken, "Git token or app password")
+
+	// bind to viper (same as before)
+	_ = viper.BindPFlag("go.os", f.Lookup("os"))
+	_ = viper.BindPFlag("go.arch", f.Lookup("arch"))
+	_ = viper.BindPFlag("go.private", f.Lookup("private"))
+	_ = viper.BindPFlag("git.auth_method", f.Lookup("auth-method"))
+	_ = viper.BindPFlag("git.username", f.Lookup("git-username"))
+	_ = viper.BindPFlag("git.token", f.Lookup("git-token"))
+}
+
 var RunCmd = &cobra.Command{
 	Use:   "run [operation]",
-	Short: "Manage Go cloud-functions (clean, mod, vendor, build, custom)",
+	Short: "Manage Go functions (clean, mod, vendor, build, custom)",
 	ValidArgs: []string{
-		golang.CmdClean,
-		golang.CmdMod,
-		golang.CmdVendor,
-		golang.CmdBuild,
+		subs.Clean,
+		subs.Mod,
+		subs.Vendor,
+		subs.Build,
+		subs.Custom,
 	},
 	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
-		d := runCmdDefaults
+		d := defaults
 		operation := args[0]
 
 		srcDir, err := cmd.Flags().GetString(common.FlagSrcDir)
@@ -114,26 +157,40 @@ var RunCmd = &cobra.Command{
 		}
 
 		switch operation {
-		case golang.CmdClean:
+		case subs.Clean:
 			if err := golang.RunGoClean(targetAbsPaths); err != nil {
 				log.Fatalf("failed to run go clean %v", err)
 			}
 
-		case golang.CmdMod:
+		case subs.Mod:
 			if err := golang.RunGoMod(targetAbsPaths); err != nil {
 				log.Fatalf("failed to run go mod %v", err)
 			}
 
-		case golang.CmdVendor:
+		case subs.Vendor:
 			if err := golang.RunGoVendor(targetAbsPaths); err != nil {
 				log.Fatalf("failed to run go vendor %v", err)
 			}
 
-		case golang.CmdBuild:
+		case subs.Build:
 			goOS := golang.ResolveENVGoOS(d.GoOS)
 			goArch := golang.ResolveENVGoArch(d.GoArch)
 			if err := golang.RunGoBuild(targetAbsPaths, goOS, goArch); err != nil {
 				log.Fatalf("failed to run go build %v", err)
+			}
+		case subs.Custom:
+			if d.CustomCommand != "" {
+				if !strings.HasPrefix(d.CustomCommand, "go ") {
+					err := fmt.Errorf("only `go` commands are allowed with --command or -c")
+					if err != nil {
+						os.Exit(1)
+					}
+				}
+				if err := common.RunCustomCommand(targetAbsPaths, d.CustomCommand); err != nil {
+					log.Fatalf("Custom command failed: %v", err)
+				}
+			} else {
+				log.Fatalf("along with custom operations --command or -c flag has to be set %v", err)
 			}
 
 		default:
@@ -141,30 +198,4 @@ var RunCmd = &cobra.Command{
 			log.Fatalf("invalid operation %q (expected one of: clean, mod, vendor, build, custom)", operation)
 		}
 	},
-}
-
-func init() {
-	d := runCmdDefaults
-	f := RunCmd.Flags()
-
-	// I would want to 
-	// keep the flags users can pass to any operation
-	f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "List of function names")
-	f.StringVarP(&d.CustomCommand, "command", "c", d.CustomCommand, "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
-
-	f.StringVar(&d.GoOS, "os", d.GoOS, "Target OS (overrides config.go.os)")
-	f.StringVar(&d.GoArch, "arch", d.GoArch, "Target ARCH (overrides config.go.arch)")
-	f.StringVar(&d.GoPrivate, "private", d.GoPrivate, "Coma separated private module hosts (e.g. github.com,gitlab.com)")
-
-	f.StringVar(&d.AuthMethod, "auth-method", d.AuthMethod, "Git authentication method to use (ssh or https)")
-	f.StringVar(&d.GitUsername, "git-username", d.GitUsername, "Git username for HTTPS")
-	f.StringVar(&d.GitToken, "git-token", d.GitToken, "Git token or app password")
-
-	// bind to viper (same as before)
-	_ = viper.BindPFlag("go.os", f.Lookup("os"))
-	_ = viper.BindPFlag("go.arch", f.Lookup("arch"))
-	_ = viper.BindPFlag("go.private", f.Lookup("private"))
-	_ = viper.BindPFlag("git.auth_method", f.Lookup("auth-method"))
-	_ = viper.BindPFlag("git.username", f.Lookup("git-username"))
-	_ = viper.BindPFlag("git.token", f.Lookup("git-token"))
 }

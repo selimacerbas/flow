@@ -17,7 +17,7 @@ import (
 	"github.com/selimacerbas/flow-cli/pkg/golang/service"
 )
 
-type BuildOptions struct {
+type BuildCmdOptions struct {
 	ImageTag         string
 	ImageRepository  string
 	ImageBuildMethod string
@@ -31,7 +31,7 @@ type BuildOptions struct {
 	AZURERegistry    string
 }
 
-var buildCmdDefaults = &BuildOptions{
+var defaults = &BuildCmdOptions{
 	ImageTag:         "",
 	ImageRepository:  "",
 	ImageBuildMethod: "",
@@ -46,7 +46,7 @@ var buildCmdDefaults = &BuildOptions{
 }
 
 func init() {
-	d := buildCmdDefaults
+	d := defaults
 	f := BuildCmd.Flags()
 
 	// image settings
@@ -85,7 +85,7 @@ var BuildCmd = &cobra.Command{
 	Use:   "build ...",
 	Short: "Manage Go container images (clean, mod/vendor, local/cloud/docker builds)",
 	Run: func(cmd *cobra.Command, args []string) {
-		d := buildCmdDefaults
+		d := defaults
 
 		srcDir, err := cmd.Flags().GetString(common.FlagSrcDir)
 		if err != nil {

@@ -5,29 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/selimacerbas/flow-cli/internal/common"
 )
 
-const ZeroCommit = "0000000000000000000000000000000000000000"
-const emptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904" // git's empty tree
-
-var tildeRe = regexp.MustCompile(`^(.*)~(\d+)$`)
-
-// GetCommitSHA resolves a ref (branch/tag/SHA/rev expr) to a commit SHA.
-// Special case: if the ref ends with "~N" and the base commit does not have
-// N first-parents (i.e., we'd walk past the root), this returns ZeroCommit.
-// It does NOT mask shallow-history errors: if a parent can't be read due to
-// a shallow clone (or other errors), it returns an error rather than ZeroCommit.
 func GetCommitSHA(repoRoot, ref string) (string, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		ref = "HEAD"
-	}
-
+	var tildeRe = regexp.MustCompile(`^(.*)~(\d+)$`)
 	// Handle "...~N" safely.
 	if m := tildeRe.FindStringSubmatch(ref); m != nil {
 		base := strings.TrimSpace(m[1])
@@ -56,7 +42,7 @@ func GetCommitSHA(repoRoot, ref string) (string, error) {
 			parents := strings.Fields(strings.TrimSpace(string(parOut)))
 			if len(parents) == 0 {
 				// We would step past the root commit.
-				return ZeroCommit, nil
+				return common.ZeroCommit, nil
 			}
 			cur = parents[0] // first parent
 		}
@@ -86,21 +72,13 @@ func GetCommitSHA(repoRoot, ref string) (string, error) {
 }
 
 // MergeBase returns `git merge-base ref branch`.
-func MergeBase(repoRoot, ref, branch string) (string, error) {
+func GetMergeBase(repoRoot, ref, branch string) (string, error) {
 	ref = strings.TrimSpace(ref)
 	out, err := exec.Command("git", "-C", repoRoot, "merge-base", ref, branch).Output()
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
-}
-
-// RangeString forms BEFORE..AFTER or BEFORE...AFTER.
-func RangeString(before, after string, threeDot bool) string {
-	if threeDot {
-		return before + "..." + after
-	}
-	return before + ".." + after
 }
 
 // Shorten returns the first n chars of a SHA (or the input if shorter).
@@ -114,59 +92,24 @@ func Shorten(sha string, n int) string {
 	return sha[:n]
 }
 
-// ChangedTopLevelDirs returns a unique, sorted list of top-level directories
-// under baseRel (relative to repo root) that changed between before and after.
-func ChangedTopLevelDirs(repoRoot, baseRel, before, after string) ([]string, error) {
-	base := filepath.ToSlash(filepath.Clean(baseRel))
-	if base == "." || base == "/" {
-		base = ""
-	}
-
-	// Handle "first commit" by diffing the empty tree
-	if strings.TrimSpace(before) == "" {
-		var err error
-		before, err = GetParentOrZero(repoRoot, after)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if before == ZeroCommit {
-		before = emptyTree
-	}
-
-	// git diff --name-only BEFORE AFTER
-	out, err := exec.Command("git", "-C", repoRoot, "diff", "--name-only", before, after).Output()
+func GetChangedDirs(projectRoot, relPath, ref1, ref2 string) ([]string, error) {
+	out, err := exec.Command("git", "-C", projectRoot, "diff", "--name-only", ref1, ref2).Output()
 	if err != nil {
 		return nil, err
 	}
 
 	lines := bytes.Split(bytes.TrimSpace(out), []byte{'\n'})
-	seen := map[string]struct{}{}
+	seen := map[string]struct{}{} // data type set in Python
 
-	for _, b := range lines {
-		p := string(b)
-		if p == "" {
+	for _, line := range lines {
+		candidate := string(line)
+		if !strings.HasPrefix(candidate, relPath+"/") {
 			continue
 		}
-		p = filepath.ToSlash(filepath.Clean(p))
+		candidate = strings.TrimPrefix(candidate, relPath+"/")
 
-		// filter by base path
-		if base != "" {
-			if p == base {
-				continue
-			}
-			if !strings.HasPrefix(p, base+"/") {
-				continue
-			}
-			p = strings.TrimPrefix(p, base+"/")
-		}
-
-		// extract first segment (top-level folder under base)
-		parts := strings.SplitN(p, "/", 2)
+		parts := strings.SplitN(candidate, "/", 2)
 		top := parts[0]
-		if top == "" || top == "." {
-			continue
-		}
 		seen[top] = struct{}{}
 	}
 
@@ -174,11 +117,5 @@ func ChangedTopLevelDirs(repoRoot, baseRel, before, after string) ([]string, err
 	for d := range seen {
 		dirs = append(dirs, d)
 	}
-	sort.Strings(dirs)
 	return dirs, nil
-}
-
-// JoinRel joins parts into a cleaned relative path.
-func JoinRel(parts ...string) string {
-	return filepath.Clean(filepath.Join(parts...))
 }

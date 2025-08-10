@@ -10,30 +10,30 @@ import (
 	"github.com/selimacerbas/flow-cli/pkg/get"
 )
 
-type Options struct {
-	Ref   string
+type CommitSHAOptions struct {
 	Short bool
 }
 
-var defaults = &Options{
-	Ref:   "HEAD",
+var defaults = &CommitSHAOptions{
 	Short: false,
 }
 
 var CommitSHACmd = &cobra.Command{
-	Use:   "commit-sha",
-	Short: "Print the SHA of a ref (HEAD by default)",
-	Run: func(cmd *cobra.Command, _ []string) {
+	Use:   "commit-sha {branch|tag|rev expr}",
+	Short: "Print the SHA of a ref",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
 		d := defaults
+		ref := args[0]
 
 		root, err := utils.DetectProjectRoot()
 		if err != nil {
 			log.Fatalf("failed to detect project root: %v", err)
 		}
 
-		sha, err := get.GetCommitSHA(root, d.Ref)
+		sha, err := get.GetCommitSHA(root, ref)
 		if err != nil {
-			log.Fatalf("git rev-parse %s failed: %v", d.Ref, err)
+			log.Fatalf("git rev-parse %s failed: %v", ref, err)
 		}
 
 		if d.Short {
@@ -47,6 +47,5 @@ func init() {
 	d := defaults
 	f := CommitSHACmd.Flags()
 
-	f.StringVar(&d.Ref, "ref", d.Ref, "Ref to resolve (e.g. HEAD, main, origin/main, a tag, or a SHA)")
 	f.BoolVar(&d.Short, "short", d.Short, "Print 7-char SHA")
 }

@@ -1,41 +1,34 @@
 package changed
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"sort"
-	"strings"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/selimacerbas/flow-cli/pkg/get"
+
 	"github.com/selimacerbas/flow-cli/internal/common"
 	"github.com/selimacerbas/flow-cli/internal/utils"
-	"github.com/selimacerbas/flow-cli/pkg/get"
 )
 
 type Options struct {
-	Ref    string
-	Before string
-	After  string
-	Scope  string // functions|services|both
-	JSON   bool
+	Scope string
 }
 
 var defaults = &Options{
-	Ref:    "HEAD",
-	Before: "",
-	After:  "",
-	Scope:  "functions",
-	JSON:   false,
+	Scope: "",
 }
 
-var Cmd = &cobra.Command{
-	Use:   "changed",
-	Short: "List top-level changed folders under functions/services",
-	Run: func(cmd *cobra.Command, _ []string) {
+var ChangedCmd = &cobra.Command{
+	Use:   "changed {branch|tag|ref|sha} {branch|tag|ref|sha}",
+	Short: "List top-level changed folders under functions/services.",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
 		d := defaults
+		ref1 := args[0]
+		ref2 := args[1]
 
 		// repo root
 		root, err := utils.DetectProjectRoot()
@@ -54,40 +47,60 @@ var Cmd = &cobra.Command{
 		}
 		svcSub, err := cmd.Flags().GetString(common.FlagServicesSubDir)
 		if err != nil {
-			// okay if not set yet
-			svcSub = ""
+			log.Fatalf("failed to get services-subdir flag: %v", err)
 		}
 
 		// normalize dirs
 		srcDir = common.ResolveSrcDir(srcDir)
 		funcSub = common.ResolveFunctionsDir(funcSub)
-		svcSub = common.ResolveServicesDir(svcSub) // reuse if you don't have a separate resolver
+		svcSub = common.ResolveServicesDir(svcSub)
 
-		before, after := resolveBeforeAfter(root, d)
+		funcRelPath := filepath.Clean(filepath.Join(srcDir, funcSub))
+		svcRelPath := filepath.Clean(filepath.Join(srcDir, svcSub))
+
+		ref1SHA, err := get.GetCommitSHA(root, ref1)
+		if err != nil {
+			log.Fatalf("failed to get commit SHA for %s: %v", ref1, err)
+		}
+		if ref1SHA == common.ZeroCommit {
+			ref1SHA = common.EmptyTree
+		}
+
+		ref2SHA, err := get.GetCommitSHA(root, ref2)
+		if err != nil {
+			log.Fatalf("failed to get commit SHA for %s: %v", ref2, err)
+		}
+		if ref2SHA == common.ZeroCommit {
+			ref2SHA = common.EmptyTree
+		}
 
 		var funcs, svcs []string
-		var errF, errS error
 
-		scope := strings.TrimSpace(d.Scope)
-		if scope == "" {
-			scope = "functions"
-		}
+		switch d.Scope {
+		case "function":
+			funcs, err = get.GetChangedDirs(root, funcRelPath, ref1SHA, ref2SHA)
+			if err != nil {
+				log.Fatalf("failed to detect chaged function dirs: %v", err)
+			}
 
-		if scope == "functions" || scope == "both" {
-			funcs, errF = get.ChangedTopLevelDirs(root, get.JoinRel(srcDir, funcSub), before, after)
-			if errF != nil {
-				log.Fatalf("detect changed function dirs: %v", errF)
+		case "service":
+			svcs, err = get.GetChangedDirs(root, svcRelPath, ref1SHA, ref2SHA)
+			if err != nil {
+				log.Fatalf(" failed detect changed service dirs: %v", err)
+			}
+		case "":
+			// meaning both dir changes
+
+			funcs, err = get.GetChangedDirs(root, funcRelPath, ref1SHA, ref2SHA)
+			if err != nil {
+				log.Fatalf("failed to detect chaged function dirs: %v", err)
+			}
+			svcs, err = get.GetChangedDirs(root, svcRelPath, ref1SHA, ref2SHA)
+			if err != nil {
+				log.Fatalf(" failed detect changed service dirs: %v", err)
 			}
 		}
-		if (scope == "services" || scope == "both") && strings.TrimSpace(svcSub) != "" {
-			svcs, errS = get.ChangedTopLevelDirs(root, get.JoinRel(srcDir, svcSub), before, after)
-			if errS != nil {
-				log.Fatalf("detect changed service dirs: %v", errS)
-			}
-		}
 
-		sort.Strings(funcs)
-		sort.Strings(svcs)
 		for _, name := range funcs {
 			fmt.Println(name)
 		}
@@ -99,41 +112,7 @@ var Cmd = &cobra.Command{
 
 func init() {
 	d := defaults
-	f := Cmd.Flags()
+	f := ChangedCmd.Flags()
 
-	f.StringVar(&d.Ref, "ref", d.Ref, "Ref to base comparisons on (default HEAD)")
-	f.StringVar(&d.Before, "before", d.Before, "Override BEFORE commit/ref")
-	f.StringVar(&d.After, "after", d.After, "Override AFTER commit/ref")
-	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan: functions|services|both")
-}
-
-func resolveBeforeAfter(root string, d *Options) (string, string) {
-	// explicit overrides win
-	if strings.TrimSpace(d.Before) != "" && strings.TrimSpace(d.After) != "" {
-		return d.Before, d.After
-	}
-
-	var (
-		before string
-		after  string
-		err    error
-	)
-
-	if strings.TrimSpace(d.Before) != "" {
-		before = d.Before
-	} else {
-		before, err = get.GetParentOrZero(root, d.Ref)
-		if err != nil {
-			log.Fatalf("resolve before failed: %v", err)
-		}
-	}
-	if strings.TrimSpace(d.After) != "" {
-		after = d.After
-	} else {
-		after, err = get.GetCommitSHA(root, d.Ref)
-		if err != nil {
-			log.Fatalf("resolve after failed: %v", err)
-		}
-	}
-	return before, after
+	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan: function|service")
 }
