@@ -1,10 +1,8 @@
 package commitsha
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -15,13 +13,11 @@ import (
 type Options struct {
 	Ref   string
 	Short bool
-	JSON  bool
 }
 
 var defaults = &Options{
 	Ref:   "HEAD",
 	Short: false,
-	JSON:  false,
 }
 
 var CommitSHACmd = &cobra.Command{
@@ -43,12 +39,6 @@ var CommitSHACmd = &cobra.Command{
 		if d.Short {
 			sha = get.Shorten(sha, 7)
 		}
-		if d.JSON {
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			_ = enc.Encode(map[string]string{"sha": sha})
-			return
-		}
 		fmt.Println(sha)
 	},
 }
@@ -59,5 +49,4 @@ func init() {
 
 	f.StringVar(&d.Ref, "ref", d.Ref, "Ref to resolve (e.g. HEAD, main, origin/main, a tag, or a SHA)")
 	f.BoolVar(&d.Short, "short", d.Short, "Print 7-char SHA")
-	f.BoolVar(&d.JSON, "json", d.JSON, "Output JSON")
 }

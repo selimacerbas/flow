@@ -1,10 +1,8 @@
-package range
+package grange
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -44,19 +42,13 @@ var RangeCmd = &cobra.Command{
 
 		rng := get.RangeString(before, after, d.ThreeDot)
 
-		if d.JSON {
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			_ = enc.Encode(map[string]string{"before": before, "after": after, "range": rng})
-			return
-		}
 		fmt.Println(rng)
 	},
 }
 
 func init() {
 	d := defaults
-	f := RangeCmd.Flags():q
+	f := RangeCmd.Flags()
 
 	f.StringVar(&d.Ref, "ref", d.Ref, "Ref to base comparisons on (default HEAD)")
 	f.StringVar(&d.Before, "before", d.Before, "Override BEFORE commit/ref")
@@ -95,3 +87,17 @@ func resolveBeforeAfter(root string, d *Options) (string, string) {
 	}
 	return before, after
 }
+
+// 1) “three-dot” in your command
+// You already wire it via --three-dot to decide between BEFORE..AFTER and BEFORE...AFTER (presumably in get.RangeString).
+// A..B (two dots)
+// For diff: compares the two tips (git diff A B).
+// For log: shows commits in B but not A.
+// A...B (three dots)
+// For diff: compares merge-base(A,B) → B (i.e., “what B introduced since it forked from A”).
+// For log: shows the symmetric difference (in A or B but not both).
+// Use --three-dot when you want “changes introduced by AFTER relative to the common base with BEFORE.”
+// Example:
+//
+// git diff main..feature → “current snapshots differ how?”
+// git diff main...feature → “what did feature add since it branched from main?”
