@@ -61,7 +61,7 @@ var Cmd = &cobra.Command{
 		// normalize dirs
 		srcDir = common.ResolveSrcDir(srcDir)
 		funcSub = common.ResolveFunctionsDir(funcSub)
-		svcSub = common.ResolveFunctionsDir(svcSub) // reuse if you don't have a separate resolver
+		svcSub = common.ResolveServicesDir(svcSub) // reuse if you don't have a separate resolver
 
 		before, after := resolveBeforeAfter(root, d)
 
@@ -86,18 +86,6 @@ var Cmd = &cobra.Command{
 			}
 		}
 
-		if d.JSON {
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			_ = enc.Encode(map[string]interface{}{
-				"before":    before,
-				"after":     after,
-				"functions": funcs,
-				"services":  svcs,
-			})
-			return
-		}
-
 		sort.Strings(funcs)
 		sort.Strings(svcs)
 		for _, name := range funcs {
@@ -117,7 +105,6 @@ func init() {
 	f.StringVar(&d.Before, "before", d.Before, "Override BEFORE commit/ref")
 	f.StringVar(&d.After, "after", d.After, "Override AFTER commit/ref")
 	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan: functions|services|both")
-	f.BoolVar(&d.JSON, "json", d.JSON, "Output JSON")
 }
 
 func resolveBeforeAfter(root string, d *Options) (string, string) {

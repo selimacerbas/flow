@@ -1,10 +1,8 @@
 package grange
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -44,19 +42,13 @@ var RangeCmd = &cobra.Command{
 
 		rng := get.RangeString(before, after, d.ThreeDot)
 
-		if d.JSON {
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			_ = enc.Encode(map[string]string{"before": before, "after": after, "range": rng})
-			return
-		}
 		fmt.Println(rng)
 	},
 }
 
 func init() {
 	d := defaults
-	f := RangeCmd.Flags():q
+	f := RangeCmd.Flags()
 
 	f.StringVar(&d.Ref, "ref", d.Ref, "Ref to base comparisons on (default HEAD)")
 	f.StringVar(&d.Before, "before", d.Before, "Override BEFORE commit/ref")

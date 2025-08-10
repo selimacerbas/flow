@@ -1,10 +1,8 @@
 package mergebase
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -15,13 +13,11 @@ import (
 type Options struct {
 	Ref   string
 	Short bool
-	JSON  bool
 }
 
 var defaults = &Options{
 	Ref:   "HEAD",
 	Short: false,
-	JSON:  false,
 }
 
 var MergeBaseCmd = &cobra.Command{
@@ -45,12 +41,6 @@ var MergeBaseCmd = &cobra.Command{
 		if d.Short {
 			base = get.Shorten(base, 7)
 		}
-		if d.JSON {
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			_ = enc.Encode(map[string]string{"sha": base})
-			return
-		}
 		fmt.Println(base)
 	},
 }
@@ -61,5 +51,4 @@ func init() {
 
 	f.StringVar(&d.Ref, "ref", d.Ref, "Base ref (default HEAD)")
 	f.BoolVar(&d.Short, "short", d.Short, "Print 7-char SHA")
-	f.BoolVar(&d.JSON, "json", d.JSON, "Output JSON")
 }
