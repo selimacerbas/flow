@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/selimacerbas/flow/cmd/commit"
 	"github.com/selimacerbas/flow/cmd/get"
 	"github.com/selimacerbas/flow/cmd/golang"
 
@@ -42,6 +43,7 @@ func Execute() {
 	rootCmd.AddCommand(
 		golang.GoCmd,
 		get.GetCmd,
+		commit.CommitCmd,
 	)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
