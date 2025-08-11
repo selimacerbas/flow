@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// DetectProjectRoot walks up from current dir to find the repo root (with go.mod).
+// DetectProjectRoot walks up from current dir to find the repo root (with .git)
 func DetectProjectRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {

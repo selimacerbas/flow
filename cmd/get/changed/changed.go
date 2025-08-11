@@ -13,11 +13,11 @@ import (
 	"github.com/selimacerbas/flow-cli/internal/utils"
 )
 
-type Options struct {
+type ChangedCmdOptions struct {
 	Scope string
 }
 
-var defaults = &Options{
+var defaults = &ChangedCmdOptions{
 	Scope: "",
 }
 

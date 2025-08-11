@@ -10,11 +10,11 @@ import (
 	"github.com/selimacerbas/flow-cli/pkg/get"
 )
 
-type CommitSHAOptions struct {
+type CommitSHACmdOptions struct {
 	Short bool
 }
 
-var defaults = &CommitSHAOptions{
+var defaults = &CommitSHACmdOptions{
 	Short: false,
 }
 

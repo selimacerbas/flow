@@ -20,7 +20,7 @@ type RootCmd struct {
 	ServicesSubdir  string
 }
 
-var rootCmdDefaults = &RootCmd{
+var defaults = &RootCmd{
 	Config:          "",
 	SrcDir:          "",
 	FunctionsSubdir: "",
@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Short: "flow is a CLI for multi-language dependency management and automation",
 	Long:  `flow is a tool to manage dependencies, build, inject, and image tasks across local repositories and runners, supporting multiple languages (e.g. Go, Python).`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		d := rootCmdDefaults
+		d := defaults
 
 		config.LoadConfig(d.Config)
 	},
@@ -50,7 +50,7 @@ func Execute() {
 }
 
 func init() {
-	d := rootCmdDefaults
+	d := defaults
 	pf := rootCmd.PersistentFlags()
 
 	pf.StringVar(&d.Config, "config", d.Config, "Path to config file (default is flow.yaml or at project root)")
