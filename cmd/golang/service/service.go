@@ -3,8 +3,8 @@ package service
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/cmd/golang/service/build"
-	"github.com/selimacerbas/flow-cli/cmd/golang/service/run"
+	"github.com/selimacerbas/flow/cmd/golang/service/build"
+	"github.com/selimacerbas/flow/cmd/golang/service/run"
 )
 
 type ServiceCmdOptions struct{}

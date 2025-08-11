@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/selimacerbas/flow/internal/utils"
 )
 
 type SetCmdOptions struct {

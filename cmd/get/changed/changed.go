@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/pkg/get"
+	"github.com/selimacerbas/flow/pkg/get"
 
-	"github.com/selimacerbas/flow-cli/internal/common"
-	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/selimacerbas/flow/internal/common"
+	"github.com/selimacerbas/flow/internal/utils"
 )
 
 type ChangedCmdOptions struct {

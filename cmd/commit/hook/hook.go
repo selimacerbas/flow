@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/internal/common"
-	"github.com/selimacerbas/flow-cli/pkg/commit"
+	"github.com/selimacerbas/flow/internal/common"
+	"github.com/selimacerbas/flow/pkg/commit"
 )
 
 var HookCmd = &cobra.Command{

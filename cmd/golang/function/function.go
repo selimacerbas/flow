@@ -3,7 +3,7 @@ package function
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/cmd/golang/function/run"
+	"github.com/selimacerbas/flow/cmd/golang/function/run"
 )
 
 type FunctionOptions struct{}

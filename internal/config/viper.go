@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/selimacerbas/flow/internal/utils"
 	"github.com/spf13/viper"
 )
 

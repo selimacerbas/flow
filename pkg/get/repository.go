@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/selimacerbas/flow-cli/internal/common"
+	"github.com/selimacerbas/flow/internal/common"
 )
 
 func GetCommitSHA(repoRoot, ref string) (string, error) {

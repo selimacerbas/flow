@@ -3,10 +3,10 @@ package commit
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/cmd/commit/hook"
-	"github.com/selimacerbas/flow-cli/cmd/commit/regex"
-	"github.com/selimacerbas/flow-cli/cmd/commit/set"
-	"github.com/selimacerbas/flow-cli/cmd/commit/validate"
+	"github.com/selimacerbas/flow/cmd/commit/hook"
+	"github.com/selimacerbas/flow/cmd/commit/regex"
+	"github.com/selimacerbas/flow/cmd/commit/set"
+	"github.com/selimacerbas/flow/cmd/commit/validate"
 )
 
 var CommitCmd = &cobra.Command{

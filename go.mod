@@ -1,4 +1,4 @@
-module github.com/selimacerbas/flow-cli
+module github.com/selimacerbas/flow
 
 go 1.24.5
 

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/selimacerbas/flow-cli/internal/common"
+	"github.com/selimacerbas/flow/internal/common"
 )
 
 func CleanMessage(s string) string {

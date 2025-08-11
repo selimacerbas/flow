@@ -11,10 +11,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/selimacerbas/flow-cli/internal/common"
-	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/selimacerbas/flow/internal/common"
+	"github.com/selimacerbas/flow/internal/utils"
 
-	"github.com/selimacerbas/flow-cli/pkg/golang/service"
+	"github.com/selimacerbas/flow/pkg/golang/service"
 )
 
 type BuildCmdOptions struct {

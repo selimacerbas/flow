@@ -7,10 +7,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/selimacerbas/flow-cli/cmd/get"
-	"github.com/selimacerbas/flow-cli/cmd/golang"
+	"github.com/selimacerbas/flow/cmd/get"
+	"github.com/selimacerbas/flow/cmd/golang"
 
-	"github.com/selimacerbas/flow-cli/internal/config"
+	"github.com/selimacerbas/flow/internal/config"
 )
 
 type RootCmd struct {

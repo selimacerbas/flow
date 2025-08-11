@@ -3,9 +3,9 @@ package get
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow-cli/cmd/get/changed"
-	"github.com/selimacerbas/flow-cli/cmd/get/commitsha"
-	"github.com/selimacerbas/flow-cli/cmd/get/mergebase"
+	"github.com/selimacerbas/flow/cmd/get/changed"
+	"github.com/selimacerbas/flow/cmd/get/commitsha"
+	"github.com/selimacerbas/flow/cmd/get/mergebase"
 )
 
 type GetSubCmds struct {

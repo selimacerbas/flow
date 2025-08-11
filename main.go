@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/selimacerbas/flow-cli/cmd"
+	"github.com/selimacerbas/flow/cmd"
 )
 
 func main() {

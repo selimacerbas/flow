@@ -3,7 +3,7 @@ package golang
 import (
 	"runtime"
 
-	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/selimacerbas/flow/internal/utils"
 )
 
 // expects coma separated string

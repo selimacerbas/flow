@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/selimacerbas/flow-cli/internal/utils"
+	"github.com/selimacerbas/flow/internal/utils"
 )
 
 func ResolveSrcDir(flagVal string) string {
