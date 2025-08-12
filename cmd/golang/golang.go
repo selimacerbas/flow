@@ -3,8 +3,8 @@ package golang
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow/cmd/golang/function"
-	"github.com/selimacerbas/flow/cmd/golang/service"
+	"github.com/selimacerbas/flow/cmd/golang/build"
+	"github.com/selimacerbas/flow/cmd/golang/run"
 )
 
 var GoCmd = &cobra.Command{
@@ -14,6 +14,6 @@ var GoCmd = &cobra.Command{
 }
 
 func init() {
-	GoCmd.AddCommand(function.FunctionCmd)
-	GoCmd.AddCommand(service.ServiceCmd)
+	GoCmd.AddCommand(run.RunCmd)
+	GoCmd.AddCommand(build.BuildCmd)
 }

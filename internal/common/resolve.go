@@ -15,6 +15,9 @@ func ResolveFunctionsDir(flagVal string) string {
 func ResolveServicesDir(flagVal string) string {
 	return utils.ResolveStringValue(flagVal, "dirs.services_subdir", "FLOW_SERVICES_SUBDIR")
 }
+func ResolveScope(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "scope", "FLOW_SCOPE")
+}
 
 func ResolveGitUsername(flagVal string) string {
 	return utils.ResolveStringValue(flagVal, "git.username", "FLOW_GIT_USERNAME")

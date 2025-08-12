@@ -14,10 +14,10 @@ import (
 	"github.com/selimacerbas/flow/internal/common"
 	"github.com/selimacerbas/flow/internal/utils"
 
-	"github.com/selimacerbas/flow/pkg/golang/service"
 )
 
 type BuildCmdOptions struct {
+	Scope            string
 	ImageTag         string
 	ImageRepository  string
 	ImageBuildMethod string
@@ -32,6 +32,7 @@ type BuildCmdOptions struct {
 }
 
 var defaults = &BuildCmdOptions{
+	Scope:            "",
 	ImageTag:         "",
 	ImageRepository:  "",
 	ImageBuildMethod: "",
@@ -49,6 +50,7 @@ func init() {
 	d := defaults
 	f := BuildCmd.Flags()
 
+	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan (function|service)")
 	// image settings
 	f.StringVar(&d.ImageTag, "image-tag", d.ImageTag, "Image tag")
 	f.StringVar(&d.ImageRepository, "image-repository", d.ImageRepository, "Image repository")
@@ -91,10 +93,13 @@ var BuildCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("failed to get src-dir flag: %v", err)
 		}
-
-		servicesSubdir, err := cmd.Flags().GetString(common.FlagServicesSubDir)
+		subFuncDir, err := cmd.Flags().GetString(common.FlagFunctionsSubDir)
 		if err != nil {
 			log.Fatalf("failed to get functions-subdir flag: %v", err)
+		}
+		subSvcDir, err := cmd.Flags().GetString(common.FlagServicesSubDir)
+		if err != nil {
+			log.Fatalf("failed to get service-subdir flag: %v", err)
 		}
 
 		projectRoot, err := utils.DetectProjectRoot()
@@ -103,9 +108,23 @@ var BuildCmd = &cobra.Command{
 		}
 
 		srcDir = common.ResolveSrcDir(srcDir)
-		servicesSubdir = common.ResolveFunctionsDir(servicesSubdir)
-		servicesDirAbsPath := service.FormAbsolutePathToServicesDir(projectRoot, srcDir, servicesSubdir)
-		targetDirs, err := service.FormAbsolutePathToServiceTargetDirs(servicesDirAbsPath, d.Targets)
+		scope := common.ResolveScope(d.Scope)
+		var subDir string
+
+		switch scope {
+		case "function":
+			subDir = common.ResolveFunctionsDir(subFuncDir)
+
+		case "service":
+			subDir = common.ResolveServicesDir(subSvcDir)
+		}
+
+		absPath := utils.FormAbsolutePathToDir(projectRoot, srcDir, subDir)
+		targetAbsPaths, err := utils.FormAbsolutePathToTargetDirs(absPath, d.Targets)
+
+		if err != nil {
+			log.Fatalf("failed to form absolute path to %s targets %v", scope, err)
+		}
 		if err != nil {
 			log.Fatalf("failed to form absolute path to function targets %v", err)
 		}
@@ -117,7 +136,7 @@ var BuildCmd = &cobra.Command{
 					os.Exit(1)
 				}
 			}
-			if err := common.RunCustomCommand(targetDirs, d.CustomCommand); err != nil {
+			if err := common.RunCustomCommand(targetAbsPaths, d.CustomCommand); err != nil {
 				log.Fatalf("Custom command failed: %v", err)
 			}
 		}
@@ -135,7 +154,7 @@ var BuildCmd = &cobra.Command{
 		switch {
 		case imageBuildMethod == "local":
 			fmt.Println("Building local Docker images...")
-			for _, dir := range targetDirs {
+			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				tag := fmt.Sprintf("local/%s:%s", name, imageTag)
 
@@ -152,7 +171,7 @@ var BuildCmd = &cobra.Command{
 				log.Fatal("--gcp-region and --gcp-project are required for GCP docker builds")
 			}
 			fmt.Println("Building & pushing GCP Docker images...")
-			for _, dir := range targetDirs {
+			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				tag := fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s:%s",
 					gcpRegion, gcpProjectId, imageRepository, name, imageTag,
@@ -181,7 +200,7 @@ var BuildCmd = &cobra.Command{
 			}
 
 			fmt.Println("Building & pushing AWS ECR images...")
-			for _, dir := range targetDirs {
+			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				tag := fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com/%s:%s",
 					awsAccountId, awsRegion, imageRepository, imageTag,
@@ -207,7 +226,7 @@ var BuildCmd = &cobra.Command{
 				log.Fatal("--azure-registry is required for Azure docker builds")
 			}
 			fmt.Println("Building & pushing Azure ACR images...")
-			for _, dir := range targetDirs {
+			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				tag := fmt.Sprintf("%s.azurecr.io/%s:%s", azureRegistry, imageRepository, imageTag)
 
@@ -231,7 +250,7 @@ var BuildCmd = &cobra.Command{
 				log.Fatal("--gcp-region and --gcp-project are required for GCP cloud-build")
 			}
 			fmt.Println("→ Submitting GCP Cloud Build jobs...")
-			for _, dir := range targetDirs {
+			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				substs := fmt.Sprintf("_SERVICE=%s,_REGION=%s,_PROJECT=%s,_REPOSITORY=%s,_TAG=%s",
 					name, gcpRegion, gcpProjectId, imageRepository, imageTag,

@@ -12,11 +12,10 @@ import (
 	"github.com/selimacerbas/flow/internal/common"
 	"github.com/selimacerbas/flow/internal/golang"
 	"github.com/selimacerbas/flow/internal/utils"
-
-	"github.com/selimacerbas/flow/pkg/golang/service"
 )
 
 type RunCmdOptions struct {
+	Scope         string
 	Targets       []string
 	CustomCommand string
 	GoOS          string
@@ -28,6 +27,7 @@ type RunCmdOptions struct {
 }
 
 var defaults = &RunCmdOptions{
+	Scope:         "",
 	Targets:       []string{},
 	CustomCommand: "",
 	GoOS:          "",
@@ -58,7 +58,8 @@ func init() {
 	d := defaults
 	f := RunCmd.Flags()
 
-	// keep the flags users can pass to any operation
+	// I would want to keep the flags users can pass to any operation
+	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan (function|service)")
 	f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "List of function names")
 	f.StringVarP(&d.CustomCommand, "command", "c", d.CustomCommand, "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
 
@@ -81,7 +82,7 @@ func init() {
 
 var RunCmd = &cobra.Command{
 	Use:   "run [operation]",
-	Short: "Manage Go services (clean, mod, vendor, build, custom)",
+	Short: "Manage Go functions (clean, mod, vendor, build, custom)",
 	ValidArgs: []string{
 		subs.Clean,
 		subs.Mod,
@@ -98,9 +99,13 @@ var RunCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("failed to get src-dir flag: %v", err)
 		}
-		subDir, err := cmd.Flags().GetString(common.FlagServicesSubDir)
+		subFuncDir, err := cmd.Flags().GetString(common.FlagFunctionsSubDir)
 		if err != nil {
 			log.Fatalf("failed to get functions-subdir flag: %v", err)
+		}
+		subSvcDir, err := cmd.Flags().GetString(common.FlagServicesSubDir)
+		if err != nil {
+			log.Fatalf("failed to get service-subdir flag: %v", err)
 		}
 
 		projectRoot, err := utils.DetectProjectRoot()
@@ -109,11 +114,21 @@ var RunCmd = &cobra.Command{
 		}
 
 		srcDir = common.ResolveSrcDir(srcDir)
-		subDir = common.ResolveFunctionsDir(subDir)
-		absPath := service.FormAbsolutePathToServicesDir(projectRoot, srcDir, subDir)
-		targetAbsPaths, err := service.FormAbsolutePathToServiceTargetDirs(absPath, d.Targets)
+		scope := common.ResolveScope(d.Scope)
+		var subDir string
+
+		switch scope {
+		case "function":
+			subDir = common.ResolveFunctionsDir(subFuncDir)
+
+		case "service":
+			subDir = common.ResolveServicesDir(subSvcDir)
+		}
+
+		absPath := utils.FormAbsolutePathToDir(projectRoot, srcDir, subDir)
+		targetAbsPaths, err := utils.FormAbsolutePathToTargetDirs(absPath, d.Targets)
 		if err != nil {
-			log.Fatalf("failed to form absolute path to function targets %v", err)
+			log.Fatalf("failed to form absolute path to %s targets %v", scope, err)
 		}
 
 		// Configure GOPRIVATE + auth (safe even if no private hosts)
@@ -141,6 +156,18 @@ var RunCmd = &cobra.Command{
 			fmt.Printf("no --auth-method has passed or configured. Meaning there is no private hosts to be authenticated.")
 		default:
 			log.Fatalf("invalid auth-method: %q (expected 'ssh' or 'https')", authMethod)
+		}
+
+		if d.CustomCommand != "" {
+			if !strings.HasPrefix(d.CustomCommand, "go ") {
+				err := fmt.Errorf("only `go` commands are allowed with --command or -c")
+				if err != nil {
+					os.Exit(1)
+				}
+			}
+			if err := common.RunCustomCommand(targetAbsPaths, d.CustomCommand); err != nil {
+				log.Fatalf("Custom command failed: %v", err)
+			}
 		}
 
 		switch operation {
@@ -177,11 +204,10 @@ var RunCmd = &cobra.Command{
 					log.Fatalf("Custom command failed: %v", err)
 				}
 			} else {
-				log.Fatalf("along with custom operation --command or -c flag has to be set %v", err)
+				log.Fatalf("along with custom operations --command or -c flag has to be set %v", err)
 			}
 
 		default:
-			// should be unreachable thanks to ValidArgs/Args
 			log.Fatalf("invalid operation %q (expected one of: clean, mod, vendor, build, custom)", operation)
 		}
 	},
