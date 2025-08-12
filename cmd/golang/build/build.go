@@ -13,7 +13,6 @@ import (
 
 	"github.com/selimacerbas/flow/internal/common"
 	"github.com/selimacerbas/flow/internal/utils"
-
 )
 
 type BuildCmdOptions struct {
@@ -157,8 +156,9 @@ var BuildCmd = &cobra.Command{
 			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				tag := fmt.Sprintf("local/%s:%s", name, imageTag)
+				args := []string{"build", "--build-arg", "SERVICE=" + name, "-t", tag, dir}
 
-				cmd := exec.Command("docker", "build", "-t", tag, dir)
+				cmd := exec.Command("docker", args...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
@@ -176,9 +176,10 @@ var BuildCmd = &cobra.Command{
 				tag := fmt.Sprintf("%s-docker.pkg.dev/%s/%s/%s:%s",
 					gcpRegion, gcpProjectId, imageRepository, name, imageTag,
 				)
+				buildArgs := []string{"build", "--build-arg", "SERVICE=" + name, "-t", tag, dir}
 
 				// build
-				buildCmd := exec.Command("docker", "build", "-t", tag, dir)
+				buildCmd := exec.Command("docker", buildArgs...)
 				buildCmd.Stdout = os.Stdout
 				buildCmd.Stderr = os.Stderr
 				if err := buildCmd.Run(); err != nil {
@@ -205,8 +206,9 @@ var BuildCmd = &cobra.Command{
 				tag := fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com/%s:%s",
 					awsAccountId, awsRegion, imageRepository, imageTag,
 				)
+				buildArgs := []string{"build", "--build-arg", "SERVICE=" + name, "-t", tag, dir}
 
-				buildCmd := exec.Command("docker", "build", "-t", tag, dir)
+				buildCmd := exec.Command("docker", buildArgs...)
 				buildCmd.Stdout = os.Stdout
 				buildCmd.Stderr = os.Stderr
 				if err := buildCmd.Run(); err != nil {
@@ -229,8 +231,9 @@ var BuildCmd = &cobra.Command{
 			for _, dir := range targetAbsPaths {
 				name := filepath.Base(dir)
 				tag := fmt.Sprintf("%s.azurecr.io/%s:%s", azureRegistry, imageRepository, imageTag)
+				buildArgs := []string{"build", "--build-arg", "SERVICE=" + name, "-t", tag, dir}
 
-				buildCmd := exec.Command("docker", "build", "-t", tag, dir)
+				buildCmd := exec.Command("docker", buildArgs...)
 				buildCmd.Stdout = os.Stdout
 				buildCmd.Stderr = os.Stderr
 				if err := buildCmd.Run(); err != nil {

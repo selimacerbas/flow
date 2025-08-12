@@ -11,19 +11,20 @@ import (
 // SetDefaults establishes all fallback defaults.
 func SetDefaults() {
 	// paths
-	// viper.SetDefault("dirs.src", "src")
-	// viper.SetDefault("dirs.functions_subdir", "cloud-functions")
-	// viper.SetDefault("dirs.containers_subdir", "cloud-runs")
-
+	viper.SetDefault("dirs.src", "src")
+	viper.SetDefault("dirs.functions_subdir", "cloud-functions")
+	viper.SetDefault("dirs.containers_subdir", "cloud-runs")
+	// scope
+	viper.SetDefault("scope", "function")
 	// Go defaults
-	// viper.SetDefault("go.os", "linux")
-	// viper.SetDefault("go.arch", "amd64")
+	viper.SetDefault("go.os", "linux")
+	viper.SetDefault("go.arch", "amd64")
 
 	// image defaults
 	viper.SetDefault("image.tag", "latest")
 
 	// cloud build defaults
-	viper.SetDefault("cloud.provider", "")
+	viper.SetDefault("cloud.provider", "gcp")
 	viper.SetDefault("cloud.region", "")
 	viper.SetDefault("cloud.project", "")
 	viper.SetDefault("cloud.repository", "")
