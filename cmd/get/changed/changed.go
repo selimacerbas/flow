@@ -25,6 +25,14 @@ var defaults = &ChangedCmdOptions{
 	Output: "",
 }
 
+func init() {
+	d := defaults
+	f := ChangedCmd.Flags()
+
+	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan: function|service")
+	f.StringVarP(&d.Output, "output", "o", d.Output, "Output format: text|json")
+}
+
 var ChangedCmd = &cobra.Command{
 	Use:   "changed {branch|tag|ref|sha} {branch|tag|ref|sha}",
 	Short: "List top-level changed folders under functions/services.",
@@ -136,11 +144,4 @@ var ChangedCmd = &cobra.Command{
 			log.Fatalf("invalid --output: %q (expected: text|json)", d.Output)
 		}
 	},
-}
-
-func init() {
-	d := defaults
-	f := ChangedCmd.Flags()
-
-	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan: function|service")
 }
