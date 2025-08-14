@@ -1,8 +1,10 @@
 package changed
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -14,11 +16,13 @@ import (
 )
 
 type ChangedCmdOptions struct {
-	Scope string
+	Scope  string
+	Output string
 }
 
 var defaults = &ChangedCmdOptions{
-	Scope: "",
+	Scope:  "",
+	Output: "",
 }
 
 var ChangedCmd = &cobra.Command{
@@ -55,8 +59,8 @@ var ChangedCmd = &cobra.Command{
 		funcSub = common.ResolveFunctionsDir(funcSub)
 		svcSub = common.ResolveServicesDir(svcSub)
 
-		funcRelPath := filepath.Clean(filepath.Join(srcDir, funcSub))
-		svcRelPath := filepath.Clean(filepath.Join(srcDir, svcSub))
+		funcRelPath := filepath.Join(srcDir, funcSub)
+		svcRelPath := filepath.Join(srcDir, svcSub)
 
 		ref1SHA, err := get.GetCommitSHA(root, ref1)
 		if err != nil {
@@ -75,7 +79,6 @@ var ChangedCmd = &cobra.Command{
 		}
 
 		var funcs, svcs []string
-
 		switch d.Scope {
 		case "function":
 			funcs, err = get.GetChangedDirs(root, funcRelPath, ref1SHA, ref2SHA)
@@ -101,11 +104,36 @@ var ChangedCmd = &cobra.Command{
 			}
 		}
 
-		for _, name := range funcs {
-			fmt.Println(name)
-		}
-		for _, name := range svcs {
-			fmt.Println(name)
+		// inside Run:
+		switch d.Output {
+		case "json":
+			var payload any
+			switch d.Scope {
+			case "function":
+				payload = funcs // -> ["f1","f2"]
+			case "service":
+				payload = svcs // -> ["s1","s2"]
+			default:
+				payload = map[string]any{ // -> {"functions":[...],"services":[...]}
+					"functions": funcs,
+					"services":  svcs,
+				}
+			}
+
+			// print JSON
+			if err := json.NewEncoder(os.Stdout).Encode(payload); err != nil {
+				log.Fatalf("failed to write json: %v", err)
+			}
+
+		case "text", "":
+			for _, name := range funcs {
+				fmt.Println(name)
+			}
+			for _, name := range svcs {
+				fmt.Println(name)
+			}
+		default:
+			log.Fatalf("invalid --output: %q (expected: text|json)", d.Output)
 		}
 	},
 }

@@ -24,7 +24,7 @@ func ResolveGitUsername(flagVal string) string {
 }
 
 func ResolveGitToken(flagVal string) string {
-	return utils.ResolveStringValue(flagVal, "git.token", "FLOW_GIT_TOKEN", "GITHUB_TOKEN")
+	return utils.ResolveStringValue(flagVal, "git.token", "FLOW_GIT_TOKEN")
 }
 
 func ResolveAuthMethod(flagVal string) string {
