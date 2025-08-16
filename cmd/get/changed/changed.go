@@ -111,6 +111,8 @@ var ChangedCmd = &cobra.Command{
 				log.Fatalf(" failed detect changed service dirs: %v", err)
 			}
 		}
+		funcs = get.NotNull(funcs)
+		svcs = get.NotNull(svcs)
 
 		// inside Run:
 		switch d.Output {

@@ -119,3 +119,11 @@ func GetChangedDirs(projectRoot, relPath, ref1, ref2 string) ([]string, error) {
 	}
 	return dirs, nil
 }
+
+// ensure empty slices encode as [] not null
+func NotNull(xs []string) []string {
+	if xs == nil {
+		return []string{}
+	}
+	return xs
+}

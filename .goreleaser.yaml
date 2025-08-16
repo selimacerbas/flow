@@ -1,4 +1,5 @@
-# .goreleaser.yaml (minimal)
+# .goreleaser.yaml
+version: 2
 project_name: flow
 
 before:
@@ -9,32 +10,18 @@ builds:
   - id: flow
     main: ./
     binary: flow
-    env:
-      - CGO_ENABLED=0
-    flags:
-      - -trimpath
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X github.com/selimacerbas/flow/cmd.version={{.Version}}  # inject version
+      - -X github.com/selimacerbas/flow/cmd.version={{.Version}}
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
 
-
 archives:
   - id: binaries
-    format: binary
-    # Unique filename per OS/arch, plus .exe on Windows
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if eq .Os "windows" }}.exe{{ end }}'
-
-# archives:
-#   - id: default
-#     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
-#     format_overrides:
-#       - goos: windows
-#         format: zip
-#     files:
-#       - LICENSE
-#       - README.md
+    formats: [binary]  # <- was `format: binary` (deprecated)
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'  # no .exe here
 
 checksum:
   name_template: 'checksums.txt'
