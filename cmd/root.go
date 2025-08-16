@@ -14,6 +14,10 @@ import (
 	"github.com/selimacerbas/flow/internal/config"
 )
 
+// This will be overwritten at link time by -ldflags.
+// Keep it unexported (lowercase) – that's fine.
+var version = "dev"
+
 type RootCmd struct {
 	Config          string
 	SrcDir          string
@@ -52,6 +56,9 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.Version = version
+	rootCmd.SetVersionTemplate(`{{printf "%s\n" .Version}}`)
+
 	d := defaults
 	pf := rootCmd.PersistentFlags()
 
