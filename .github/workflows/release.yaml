@@ -19,7 +19,7 @@ jobs:
       - name: Set up Go from go.mod
         uses: actions/setup-go@v5
         with:
-          go-version-file: ${{ env.FUNCTION_PATH }}/${{ matrix.function }}/go.mod
+          go-version-file: ./go.mod
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
