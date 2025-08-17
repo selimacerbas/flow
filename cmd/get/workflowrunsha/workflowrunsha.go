@@ -140,9 +140,7 @@ func fetchHTTP(owner, repo, workflow, branch, token string) (*runInfo, error) {
 	req, _ := http.NewRequest("GET", u, nil)
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
