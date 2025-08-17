@@ -22,7 +22,7 @@ type RunCmdOptions struct {
 	GoArch        string
 	GoPrivate     string
 	AuthMethod    string
-	GitUsername   string
+	GitOwner      string
 	GitToken      string
 }
 
@@ -34,7 +34,7 @@ var defaults = &RunCmdOptions{
 	GoArch:        "",
 	GoPrivate:     "",
 	AuthMethod:    "",
-	GitUsername:   "",
+	GitOwner:      "",
 	GitToken:      "",
 }
 
@@ -68,7 +68,7 @@ func init() {
 	f.StringVar(&d.GoPrivate, "private", d.GoPrivate, "Coma separated private module hosts (e.g. github.com,gitlab.com)")
 
 	f.StringVar(&d.AuthMethod, "auth-method", d.AuthMethod, "Git authentication method to use (ssh or https)")
-	f.StringVar(&d.GitUsername, "git-username", d.GitUsername, "Git username for HTTPS")
+	f.StringVar(&d.GitOwner, "git-owner", d.GitOwner, "Git owner for HTTPS")
 	f.StringVar(&d.GitToken, "git-token", d.GitToken, "Git token or app password")
 
 	// bind to viper (same as before)
@@ -144,12 +144,12 @@ var RunCmd = &cobra.Command{
 				log.Fatalf("failed to set git auth SSH %v", err)
 			}
 		case "https":
-			username := common.ResolveGitUsername(d.GitUsername)
+			owner := common.ResolveGitOwner(d.GitOwner)
 			token := common.ResolveGitToken(d.GitToken)
-			if username == "" || token == "" {
-				log.Fatalf("--git-username and --git-token is required when configuring private HTTPS hosts. consider passing via flag, config or ENV")
+			if owner == "" || token == "" {
+				log.Fatalf("--git-owner and --git-token is required when configuring private HTTPS hosts. consider passing via flag, config or ENV")
 			}
-			if err := common.SetGitAuthHTTPS(privateHosts, username, token); err != nil {
+			if err := common.SetGitAuthHTTPS(privateHosts, owner, token); err != nil {
 				log.Fatalf("failed to git auth HTTPS %v", err)
 			}
 		case "":

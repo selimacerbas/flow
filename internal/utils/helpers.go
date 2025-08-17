@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/spf13/viper"
@@ -77,4 +78,8 @@ func FormAbsolutePathToTargetDirs(absPath string, targets []string) ([]string, e
 	}
 
 	return resolved, nil
+}
+func HasBin(command string) bool {
+	_, err := exec.LookPath(command)
+	return err == nil
 }

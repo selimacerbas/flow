@@ -19,12 +19,24 @@ func ResolveScope(flagVal string) string {
 	return utils.ResolveStringValue(flagVal, "scope", "FLOW_SCOPE")
 }
 
-func ResolveGitUsername(flagVal string) string {
-	return utils.ResolveStringValue(flagVal, "git.username", "FLOW_GIT_USERNAME")
+func ResolveGitOwner(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.owner", "FLOW_GIT_OWNER")
+}
+
+func ResolveGitRepo(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.repo", "FLOW_GIT_REPO")
 }
 
 func ResolveGitToken(flagVal string) string {
 	return utils.ResolveStringValue(flagVal, "git.token", "FLOW_GIT_TOKEN")
+}
+
+func ResolveGitWorkflow(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.workflow", "FLOW_GIT_WORKFLOW")
+}
+
+func ResolveGitBranch(flagVal string) string {
+	return utils.ResolveStringValue(flagVal, "git.branch", "FLOW_GIT_BRANCH")
 }
 
 func ResolveAuthMethod(flagVal string) string {

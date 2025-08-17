@@ -6,6 +6,7 @@ import (
 	"github.com/selimacerbas/flow/cmd/get/changed"
 	"github.com/selimacerbas/flow/cmd/get/commitsha"
 	"github.com/selimacerbas/flow/cmd/get/mergebase"
+	"github.com/selimacerbas/flow/cmd/get/workflowrunsha"
 )
 
 type GetSubCmds struct {
@@ -35,5 +36,6 @@ func init() {
 	GetCmd.AddCommand(changed.ChangedCmd)
 	GetCmd.AddCommand(commitsha.CommitSHACmd)
 	GetCmd.AddCommand(mergebase.MergeBaseCmd)
+	GetCmd.AddCommand(workflowrunsha.WorkflowRunSHA)
 
 }
