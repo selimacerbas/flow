@@ -1,11 +1,13 @@
 package get
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -98,32 +100,35 @@ func GetChangedDirs(projectRoot, relPath, ref1, ref2 string) ([]string, error) {
 		return nil, err
 	}
 
-	lines := bytes.Split(bytes.TrimSpace(out), []byte{'\n'})
-	seen := map[string]struct{}{} // data type set in Python
+	seen := make(map[string]struct{})
+	var dirs []string
 
-	for _, line := range lines {
-		candidate := string(line)
-		if !strings.HasPrefix(candidate, relPath+"/") {
+	sc := bufio.NewScanner(bytes.NewReader(out))
+	for sc.Scan() {
+		p := sc.Text()
+		if !strings.HasPrefix(p, relPath+"/") {
 			continue
 		}
-		candidate = strings.TrimPrefix(candidate, relPath+"/")
 
-		parts := strings.SplitN(candidate, "/", 2)
-		top := parts[0]
+		trimmed := strings.TrimPrefix(p, relPath+"/")
+
+		// If there's no '/' left, it's a file directly under relPath (e.g. README.md) → skip
+		slash := strings.IndexByte(trimmed, '/')
+		if slash == -1 {
+			continue
+		}
+
+		top := trimmed[:slash]
+		if _, ok := seen[top]; ok {
+			continue
+		}
 		seen[top] = struct{}{}
+		dirs = append(dirs, top)
+	}
+	if err := sc.Err(); err != nil {
+		return nil, err
 	}
 
-	var dirs []string
-	for d := range seen {
-		dirs = append(dirs, d)
-	}
+	sort.Strings(dirs) // stable output
 	return dirs, nil
-}
-
-// ensure empty slices encode as [] not null
-func NotNull(xs []string) []string {
-	if xs == nil {
-		return []string{}
-	}
-	return xs
 }
