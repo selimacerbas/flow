@@ -52,5 +52,5 @@ func init() {
 	d := defaults
 	f := MergeBaseCmd.Flags()
 
-	f.BoolVar(&d.Short, "short", d.Short, "Print 7-char SHA")
+    f.BoolVar(&d.Short, "short", d.Short, "Print 7-character abbreviated SHA")
 }

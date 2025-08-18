@@ -49,22 +49,22 @@ func init() {
 	d := defaults
 	f := BuildCmd.Flags()
 
-	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan (function|service)")
+    f.StringVar(&d.Scope, "scope", d.Scope, "Kind of target (function|service)")
 	// image settings
-	f.StringVar(&d.ImageTag, "image-tag", d.ImageTag, "Image tag")
-	f.StringVar(&d.ImageRepository, "image-repository", d.ImageRepository, "Image repository")
-	f.StringVar(&d.ImageBuildMethod, "image-build-method", d.ImageBuildMethod, "Image build method (local|docker|cloud-build)")
+    f.StringVar(&d.ImageTag, "image-tag", d.ImageTag, "Image tag to apply when building/pushing")
+    f.StringVar(&d.ImageRepository, "image-repository", d.ImageRepository, "Repository name (without registry host)")
+    f.StringVar(&d.ImageBuildMethod, "image-build-method", d.ImageBuildMethod, "Build method: local|docker|cloud-build")
 	// targets & custom command
-	f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "List of service names")
-	f.StringVarP(&d.CustomCommand, "command", "c", "", "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
+    f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "Target service names. Repeat or comma-separate.")
+    f.StringVarP(&d.CustomCommand, "command", "c", "", "Custom go command(s) to run in each target (e.g., 'go clean ./... && go build'). Must start with 'go '.")
 
 	// cloud provider settings
-	f.StringVar(&d.CloudProvider, "cloud-provider", d.CloudProvider, "Cloud provider (gcp|aws|azure)")
-	f.StringVar(&d.GCPRegion, "gcp-region", d.GCPRegion, "GCP region")
-	f.StringVar(&d.GCPProjectId, "gcp-project-id", d.GCPProjectId, "GCP project ID")
-	f.StringVar(&d.AWSRegion, "aws-region", d.AWSRegion, "AWS region")
-	f.StringVar(&d.AWSAccountId, "aws-account-id", d.AWSAccountId, "AWS account ID")
-	f.StringVar(&d.AZURERegistry, "azure-registry", d.AZURERegistry, "Azure registry")
+    f.StringVar(&d.CloudProvider, "cloud-provider", d.CloudProvider, "Cloud provider: gcp|aws|azure")
+    f.StringVar(&d.GCPRegion, "gcp-region", d.GCPRegion, "GCP region (e.g., europe-west1)")
+    f.StringVar(&d.GCPProjectId, "gcp-project-id", d.GCPProjectId, "GCP project ID")
+    f.StringVar(&d.AWSRegion, "aws-region", d.AWSRegion, "AWS region (e.g., eu-west-1)")
+    f.StringVar(&d.AWSAccountId, "aws-account-id", d.AWSAccountId, "AWS account ID")
+    f.StringVar(&d.AZURERegistry, "azure-registry", d.AZURERegistry, "Azure Container Registry name (without .azurecr.io)")
 
 	// bind to viper
 	_ = viper.BindPFlag("image.tag", f.Lookup("image-tag"))

@@ -35,12 +35,12 @@ func init() {
 	d := defaults
 	f := WorkflowRunSHA.Flags()
 
-	f.StringVar(&d.GitOwner, "git-owner", d.GitOwner, "GitHub owner (defaults from env/config)")
-	f.StringVar(&d.GitRepo, "git-repo", d.GitRepo, "GitHub repo (defaults from env/config)")
-	f.StringVar(&d.GitWorkflow, "git-workflow", d.GitWorkflow, "Workflow file name, e.g. build.yaml")
-	f.StringVar(&d.GitBranch, "git-branch", d.GitBranch, "Branch name (defaults from env)")
-	f.StringVar(&d.GitToken, "git-token", d.GitToken, "GitHub token (defaults from config/env)")
-	f.StringVarP(&d.Output, "output", "o", d.Output, "Output format: text|json")
+    f.StringVar(&d.GitOwner, "git-owner", d.GitOwner, "GitHub owner/org. Reads from config/env.")
+    f.StringVar(&d.GitRepo, "git-repo", d.GitRepo, "GitHub repository name. Reads from config/env.")
+    f.StringVar(&d.GitWorkflow, "git-workflow", d.GitWorkflow, "Workflow file name under .github/workflows (e.g., build.yaml).")
+    f.StringVar(&d.GitBranch, "git-branch", d.GitBranch, "Branch name to query. Reads from env (e.g., GITHUB_REF_NAME).")
+    f.StringVar(&d.GitToken, "git-token", d.GitToken, "GitHub token. Reads from config/env (GITHUB_TOKEN or GH_TOKEN).")
+    f.StringVarP(&d.Output, "output", "o", d.Output, "Output format (text|json). Default: text")
 }
 
 var WorkflowRunSHA = &cobra.Command{

@@ -82,5 +82,5 @@ exec "%s" commit hook "$1"
 func init() {
 	d := defaults
 	f := SetCmd.Flags()
-	f.StringVar(&d.Bin, "bin", d.Bin, "CLI binary or launcher (e.g. flow, ./flow, /usr/local/bin/flow, or 'go run .')")
+	f.StringVar(&d.Bin, "bin", d.Bin, "CLI binary or launcher invoked by the hook. Examples: 'flow', './flow', '/usr/local/bin/flow', or 'go run .'. Default: ./flow")
 }

@@ -29,8 +29,8 @@ func init() {
 	d := defaults
 	f := ChangedCmd.Flags()
 
-	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan: function|service")
-	f.StringVarP(&d.Output, "output", "o", d.Output, "Output format: text|json")
+    f.StringVar(&d.Scope, "scope", d.Scope, "Kind to scan (function|service). Empty = both.")
+    f.StringVarP(&d.Output, "output", "o", d.Output, "Output format (text|json). Default: text")
 }
 
 var ChangedCmd = &cobra.Command{

@@ -59,17 +59,17 @@ func init() {
 	f := RunCmd.Flags()
 
 	// I would want to keep the flags users can pass to any operation
-	f.StringVar(&d.Scope, "scope", d.Scope, "Scope to scan (function|service)")
-	f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "List of function names")
-	f.StringVarP(&d.CustomCommand, "command", "c", d.CustomCommand, "Custom Go-related shell command(s) to run in each target (e.g. 'go clean . && go mod tidy && go build')")
+    f.StringVar(&d.Scope, "scope", d.Scope, "Kind of target (function|service)")
+    f.StringSliceVarP(&d.Targets, "targets", "t", d.Targets, "Target names. Repeat or comma-separate.")
+    f.StringVarP(&d.CustomCommand, "command", "c", d.CustomCommand, "Custom go command(s) to run in each target (e.g., 'go clean ./... && go build'). Must start with 'go '.")
 
-	f.StringVar(&d.GoOS, "os", d.GoOS, "Target OS (overrides config.go.os)")
-	f.StringVar(&d.GoArch, "arch", d.GoArch, "Target ARCH (overrides config.go.arch)")
-	f.StringVar(&d.GoPrivate, "private", d.GoPrivate, "Coma separated private module hosts (e.g. github.com,gitlab.com)")
+    f.StringVar(&d.GoOS, "os", d.GoOS, "GOOS for builds. Overrides config 'go.os'.")
+    f.StringVar(&d.GoArch, "arch", d.GoArch, "GOARCH for builds. Overrides config 'go.arch'.")
+    f.StringVar(&d.GoPrivate, "private", d.GoPrivate, "Comma-separated private module hosts for GOPRIVATE (e.g., github.com,gitlab.com)")
 
-	f.StringVar(&d.AuthMethod, "auth-method", d.AuthMethod, "Git authentication method to use (ssh or https)")
-	f.StringVar(&d.GitOwner, "git-owner", d.GitOwner, "Git owner for HTTPS")
-	f.StringVar(&d.GitToken, "git-token", d.GitToken, "Git token or app password")
+    f.StringVar(&d.AuthMethod, "auth-method", d.AuthMethod, "Git auth for private modules (ssh|https)")
+    f.StringVar(&d.GitOwner, "git-owner", d.GitOwner, "Owner/org used with https auth")
+    f.StringVar(&d.GitToken, "git-token", d.GitToken, "Token/app password used with https auth")
 
 	// bind to viper (same as before)
 	_ = viper.BindPFlag("go.os", f.Lookup("os"))

@@ -62,11 +62,11 @@ func init() {
 	d := defaults
 	pf := rootCmd.PersistentFlags()
 
-	pf.StringVar(&d.Config, "config", d.Config, "Path to config file (default is flow.yaml or at project root)")
+    pf.StringVar(&d.Config, "config", d.Config, "Path to config file. Defaults to 'flow.yaml' in the repo root.")
 
-	pf.StringVar(&d.SrcDir, "src-dir", d.SrcDir, "Root source directory (default from config: dirs.src)")
-	pf.StringVar(&d.FunctionsSubdir, "functions-subdir", d.FunctionsSubdir, "Subdirectory for cloud functions (default from config: dirs.functions_subdir)")
-	pf.StringVar(&d.ServicesSubdir, "services-subdir", d.ServicesSubdir, "Subdirectory for container services(default from config: dirs.services_subdir)")
+    pf.StringVar(&d.SrcDir, "src-dir", d.SrcDir, "Root source directory. Reads from config key 'dirs.src'.")
+    pf.StringVar(&d.FunctionsSubdir, "functions-subdir", d.FunctionsSubdir, "Subdirectory under src for cloud functions. Reads from 'dirs.functions_subdir'.")
+    pf.StringVar(&d.ServicesSubdir, "services-subdir", d.ServicesSubdir, "Subdirectory under src for services. Reads from 'dirs.services_subdir'.")
 
 	config.SetDefaults()
 
