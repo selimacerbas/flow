@@ -5,32 +5,40 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
-	"github.com/selimacerbas/flow/pkg/get"
-
 	"github.com/selimacerbas/flow/internal/common"
-	"github.com/selimacerbas/flow/internal/utils"
+	"github.com/selimacerbas/flow/pkg/get"
 )
 
-type ChangedCmdOptions struct {
+type ChangedCmdArgOptions struct {
+	Ref1 string
+	Ref2 string
+}
+
+type ChangedCmdFlagOptions struct {
 	Scope  string
 	Output string
 }
 
-var defaults = &ChangedCmdOptions{
+var flagOpts = &ChangedCmdFlagOptions{
 	Scope:  "",
 	Output: "",
 }
 
+type ChangedCmdOutput struct {
+	Functions []string `json:"functions,omitempty"`
+	Services  []string `json:"services,omitempty"`
+}
+
 func init() {
-	d := defaults
+	o := flagOpts
 	f := ChangedCmd.Flags()
 
-    f.StringVar(&d.Scope, "scope", d.Scope, "Kind to scan (function|service). Empty = both.")
-    f.StringVarP(&d.Output, "output", "o", d.Output, "Output format (text|json). Default: text")
+	f.StringVar(&o.Scope, "scope", o.Scope, "Kind of target (function|service|all).")
+	f.StringVarP(&o.Output, "output", "o", o.Output, "Output format (text|json).")
+
 }
 
 var ChangedCmd = &cobra.Command{
@@ -38,14 +46,11 @@ var ChangedCmd = &cobra.Command{
 	Short: "List top-level changed folders under functions/services.",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		d := defaults
-		ref1 := args[0]
-		ref2 := args[1]
+		o := flagOpts
 
-		// repo root
-		root, err := utils.DetectProjectRoot()
-		if err != nil {
-			log.Fatalf("failed to detect project root: %v", err)
+		argOpts := &ChangedCmdArgOptions{
+			Ref1: args[0],
+			Ref2: args[1],
 		}
 
 		// read persistent flags defined higher up in your CLI
@@ -62,86 +67,33 @@ var ChangedCmd = &cobra.Command{
 			log.Fatalf("failed to get services-subdir flag: %v", err)
 		}
 
-		// normalize dirs
-		srcDir = common.ResolveSrcDir(srcDir)
-		funcSub = common.ResolveFunctionsDir(funcSub)
-		svcSub = common.ResolveServicesDir(svcSub)
+		scope := common.ResolveScope(o.Scope)
 
-		funcRelPath := filepath.Join(srcDir, funcSub)
-		svcRelPath := filepath.Join(srcDir, svcSub)
-
-		ref1SHA, err := get.GetCommitSHA(root, ref1)
+		result, err := get.GetChanged(argOpts.Ref1, argOpts.Ref2, scope, srcDir, funcSub, svcSub)
 		if err != nil {
-			log.Fatalf("failed to get commit SHA for %s: %v", ref1, err)
-		}
-		if ref1SHA == common.ZeroCommit {
-			ref1SHA = common.EmptyTree
+			log.Fatalf("failed to get changed: %v", err)
 		}
 
-		ref2SHA, err := get.GetCommitSHA(root, ref2)
-		if err != nil {
-			log.Fatalf("failed to get commit SHA for %s: %v", ref2, err)
-		}
-		if ref2SHA == common.ZeroCommit {
-			ref2SHA = common.EmptyTree
+		output := &ChangedCmdOutput{
+			Functions: result.Functions,
+			Services:  result.Services,
 		}
 
-		var funcs, svcs []string
-		switch d.Scope {
-		case "function":
-			funcs, err = get.GetChangedDirs(root, funcRelPath, ref1SHA, ref2SHA)
-			if err != nil {
-				log.Fatalf("failed to detect chaged function dirs: %v", err)
-			}
-
-		case "service":
-			svcs, err = get.GetChangedDirs(root, svcRelPath, ref1SHA, ref2SHA)
-			if err != nil {
-				log.Fatalf(" failed detect changed service dirs: %v", err)
-			}
-		case "":
-			// meaning both dir changes
-
-			funcs, err = get.GetChangedDirs(root, funcRelPath, ref1SHA, ref2SHA)
-			if err != nil {
-				log.Fatalf("failed to detect chaged function dirs: %v", err)
-			}
-			svcs, err = get.GetChangedDirs(root, svcRelPath, ref1SHA, ref2SHA)
-			if err != nil {
-				log.Fatalf(" failed detect changed service dirs: %v", err)
-			}
-		}
-
-		// inside Run:
-		switch d.Output {
+		switch o.Output {
 		case "json":
-			var payload any
-			switch d.Scope {
-			case "function":
-				payload = funcs // -> ["f1","f2"]
-			case "service":
-				payload = svcs // -> ["s1","s2"]
-			default:
-				payload = map[string]any{ // -> {"functions":[...],"services":[...]}
-					"functions": funcs,
-					"services":  svcs,
-				}
-			}
-
-			// print JSON
-			if err := json.NewEncoder(os.Stdout).Encode(payload); err != nil {
+			if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
 				log.Fatalf("failed to write json: %v", err)
 			}
 
-		case "text", "":
-			for _, name := range funcs {
+		case "text":
+			for _, name := range output.Functions {
 				fmt.Println(name)
 			}
-			for _, name := range svcs {
+			for _, name := range output.Services {
 				fmt.Println(name)
 			}
 		default:
-			log.Fatalf("invalid --output: %q (expected: text|json)", d.Output)
+			log.Fatalf("invalid --output: %q (expected: text|json)", o.Output)
 		}
 	},
 }

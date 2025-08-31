@@ -3,29 +3,31 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
 
-	"log/slog"
+	"github.com/spf13/cobra"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/spf13/cobra"
+	"github.com/selimacerbas/flow/internal/common"
+	"github.com/selimacerbas/flow/tools"
 )
 
 type McpCmdOptions struct {
-	HTTP string
+	HTTPAddress string
 }
 
 var defaults = &McpCmdOptions{
-	HTTP: "",
+	HTTPAddress: "",
 }
 
 func init() {
 	d := defaults
 	f := McpCmd.Flags()
 
-	f.StringVar(&d.HTTP, "http", d.HTTP, "Streamable HTTP address")
+	f.StringVar(&d.HTTPAddress, "http-address", d.HTTPAddress, "Streamable HTTP address")
 
 }
 
@@ -33,8 +35,23 @@ var McpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Run flow as a mcp server",
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
 		d := defaults
+
+		srcDir, err := cmd.Flags().GetString(common.FlagSrcDir)
+		if err != nil {
+			slog.Error("failed to get src-dir flag", "error", err)
+			return
+		}
+		funcSub, err := cmd.Flags().GetString(common.FlagFunctionsSubDir)
+		if err != nil {
+			slog.Error("failed to get functions-subdir flag", "error", err)
+			return
+		}
+		svcSub, err := cmd.Flags().GetString(common.FlagServicesSubDir)
+		if err != nil {
+			slog.Error("failed to get services-subdir flag", "error", err)
+			return
+		}
 
 		opts := &mcp.ServerOptions{
 			Instructions: "Use this server!",
@@ -47,18 +64,18 @@ var McpCmd = &cobra.Command{
 			URI:      "embedded/info",
 		}, embeddedResource)
 
-		mcp.AddTool(server, &mcp.Tool{Name: "changed", Description: "find changed files"}, changedTool)
+		mcp.AddTool(server, &mcp.Tool{Name: "changed", Description: "find changed folders"}, tools.ChangedTool(srcDir, funcSub, svcSub))
 
-		if d.HTTP != "" {
+		if d.HTTPAddress != "" {
 			handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 				return server
 			}, nil)
-			slog.Info("MCP handler listening at %s", d.HTTP)
-			http.ListenAndServe(d.HTTP, handler)
+			slog.Info("MCP handler listening", "address", d.HTTPAddress)
+			http.ListenAndServe(d.HTTPAddress, handler)
 		} else {
 			t := &mcp.LoggingTransport{Transport: &mcp.StdioTransport{}, Writer: os.Stderr}
 			if err := server.Run(context.Background(), t); err != nil {
-				slog.Error("Server failed %v", err)
+				slog.Error("Server failed", "error", err)
 			}
 		}
 	},
@@ -103,19 +120,4 @@ func embeddedResource(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.Rea
 			},
 		},
 	}, nil
-}
-
-type args struct {
-	Name string `json:"name" jsonschema:"the name to say hi to"`
-}
-
-// contentTool is a tool that returns unstructured content.
-//
-// Since its output type is 'any', no output schema is created.
-func changedTool(ctx context.Context, req *mcp.CallToolRequest, args args) (*mcp.CallToolResult, any, error) {
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: "Hi " + args.Name},
-		},
-	}, nil, nil
 }

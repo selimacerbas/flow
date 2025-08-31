@@ -10,6 +10,7 @@ import (
 	"github.com/selimacerbas/flow/cmd/commit"
 	"github.com/selimacerbas/flow/cmd/get"
 	"github.com/selimacerbas/flow/cmd/golang"
+	"github.com/selimacerbas/flow/cmd/mcp"
 
 	"github.com/selimacerbas/flow/internal/config"
 )
@@ -48,6 +49,7 @@ func Execute() {
 		golang.GoCmd,
 		get.GetCmd,
 		commit.CommitCmd,
+		mcp.McpCmd,
 	)
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -62,11 +64,11 @@ func init() {
 	d := defaults
 	pf := rootCmd.PersistentFlags()
 
-    pf.StringVar(&d.Config, "config", d.Config, "Path to config file. Defaults to 'flow.yaml' in the repo root.")
+	pf.StringVar(&d.Config, "config", d.Config, "Path to config file. Defaults to 'flow.yaml' in the repo root.")
 
-    pf.StringVar(&d.SrcDir, "src-dir", d.SrcDir, "Root source directory. Reads from config key 'dirs.src'.")
-    pf.StringVar(&d.FunctionsSubdir, "functions-subdir", d.FunctionsSubdir, "Subdirectory under src for cloud functions. Reads from 'dirs.functions_subdir'.")
-    pf.StringVar(&d.ServicesSubdir, "services-subdir", d.ServicesSubdir, "Subdirectory under src for services. Reads from 'dirs.services_subdir'.")
+	pf.StringVar(&d.SrcDir, "src-dir", d.SrcDir, "Root source directory. Reads from config key 'dirs.src'.")
+	pf.StringVar(&d.FunctionsSubdir, "functions-subdir", d.FunctionsSubdir, "Subdirectory under src for cloud functions. Reads from 'dirs.functions_subdir'.")
+	pf.StringVar(&d.ServicesSubdir, "services-subdir", d.ServicesSubdir, "Subdirectory under src for services. Reads from 'dirs.services_subdir'.")
 
 	config.SetDefaults()
 
